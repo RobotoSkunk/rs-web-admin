@@ -63,6 +63,7 @@ type VerifyResponse = {
 export default function Login()
 {
 	const [ sessionId, setSessionId ] = useState('');
+	const [ sessionVerifier, setSessionVerifier ] = useState('');
 	const [ currentSection, setCurrentSection ] = useState(0);
 
 	const sections = [
@@ -104,9 +105,24 @@ export default function Login()
 					const verifyResponse = await Fetcher.post<VerifyResponse>('auth/verify', {
 						session_id: params.session_id,
 						session_proof: clientSession.proof,
-					})
+					});
 
-					console.log(verifyResponse.body);
+					if (verifyResponse.body.success) {
+						let success = false;
+
+						try {
+							SRP.verifySession(clientEphemeral.public, clientSession, verifyResponse.body.proof!);
+							success = true;
+						} catch (e) {
+							throw e;
+						}
+
+						if (success) {
+							setSessionId(params.session_id);
+							setSessionVerifier(verifyResponse.body.verifier!);
+							setCurrentSection(currentSection + 1);
+						}
+					}
 				} }
 			>
 				<p>
@@ -126,7 +142,23 @@ export default function Login()
 				onSubmit={ async (ev) =>
 				{
 					ev.preventDefault();
-					setCurrentSection(currentSection + 1);
+					const form = ev.currentTarget;
+
+					if (!form.checkValidity()) {
+						form.reportValidity();
+						return;
+					}
+
+					const formData = new FormData(form);
+					const totpToken = formData.get('totp') as string;
+
+					const authResponse = await Fetcher.post<{ success: boolean }>('auth/authenticate', {
+						session_id: sessionId,
+						verifier: sessionVerifier,
+						totp_token: totpToken,
+					});
+
+					console.log(authResponse.body);
 				} }
 			>
 				<p>
