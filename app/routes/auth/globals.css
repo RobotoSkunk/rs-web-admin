@@ -44,7 +44,16 @@ body {
 	padding: 10px 20px;
 	border-radius: 8px;
 
+	width: 217px;
+
 	overflow: hidden;
+}
+
+.error {
+	display: inline-block;
+	color: #fda4af;
+	width: 100%;
+	text-align: center;
 }
 
 input {
@@ -79,6 +88,10 @@ button {
 	&:hover,
 	&:focus-visible {
 		background: var(--color-secondary);
+	}
+
+	&:disabled {
+		cursor: not-allowed;
 	}
 }
 

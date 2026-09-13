@@ -59,19 +59,30 @@ type ChallengeResponse = {
 };
 
 type VerifyResponse = {
-	success: boolean;
+	error?: {
+		message: string;
+	};
 	proof?: string;
 	verifier?: string;
+};
+
+type TotpResponse = {
+	error?: {
+		message: string;
+	};
+	success?: true;
 };
 
 
 export default function Login()
 {
 	const navigate = useNavigate();
+	const [ busy, setBusy ] = useState(false);
 
 	const [ sessionId, setSessionId ] = useState('');
 	const [ sessionVerifier, setSessionVerifier ] = useState('');
 	const [ currentSection, setCurrentSection ] = useState(0);
+	const [ errorMessage, setErrorMessage ] = useState('');
 
 	const sections = [
 		(
@@ -90,6 +101,9 @@ export default function Login()
 					const formData = new FormData(form);
 					const username = formData.get('username') as string;
 					const password = formData.get('password') as string;
+
+					setErrorMessage('');
+					setBusy(true);
 
 					// Challenge
 					const clientEphemeral = SRP.generateEphemeral();
@@ -114,7 +128,7 @@ export default function Login()
 						session_proof: clientSession.proof,
 					});
 
-					if (verifyResponse.body.success) {
+					if (!verifyResponse.body.error) {
 						let success = false;
 
 						try {
@@ -128,8 +142,14 @@ export default function Login()
 							setSessionId(params.session_id);
 							setSessionVerifier(verifyResponse.body.verifier!);
 							setCurrentSection(currentSection + 1);
+						} else {
+							setErrorMessage(`Couldn't verify the SRP challenge.`);
 						}
+					} else {
+						setErrorMessage(verifyResponse.body.error.message);
 					}
+
+					setBusy(false);
 				} }
 			>
 				<p>
@@ -140,7 +160,10 @@ export default function Login()
 					<label htmlFor='password'>Password: </label><br/>
 					<input id='password' name='password' type='password' required/>
 				</p>
-				<button>Continue</button>
+				<span className='error'>{ errorMessage }</span><br/>
+				<button disabled={ busy }>
+					{ busy ? 'Loading...' : 'Continue' }
+				</button>
 			</form>
 		),
 		(
@@ -159,22 +182,32 @@ export default function Login()
 					const formData = new FormData(form);
 					const totpToken = formData.get('totp') as string;
 
-					const authResponse = await Fetcher.post<{ success: boolean }>('auth/authenticate', {
+					setErrorMessage('');
+					setBusy(true);
+
+					const authResponse = await Fetcher.post<TotpResponse>('auth/authenticate', {
 						session_id: sessionId,
 						verifier: sessionVerifier,
 						totp_token: totpToken,
 					});
 
-					if (authResponse.body.success) {
+					if (!authResponse.body.error) {
 						await navigate('/dashboard/');
+					} else {
+						setErrorMessage(authResponse.body.error.message);
 					}
+
+					setBusy(false);
 				} }
 			>
 				<p>
 					<label htmlFor='totp'>TOTP Token: </label><br/>
 					<input id='totp' name='totp' required/>
 				</p>
-				<button>Authenticate</button>
+				<span className='error'>{ errorMessage }</span><br/>
+				<button disabled={ busy }>
+					{ busy ? 'Loading...' : 'Authenticate' }
+				</button>
 			</form>
 		),
 	];
