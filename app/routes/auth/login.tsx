@@ -21,6 +21,11 @@ import {
 } from 'react';
 
 import {
+	redirect,
+	useNavigate,
+} from 'react-router';
+
+import {
 	AnimatePresence,
 	motion,
 	type Variants,
@@ -62,6 +67,8 @@ type VerifyResponse = {
 
 export default function Login()
 {
+	const navigate = useNavigate();
+
 	const [ sessionId, setSessionId ] = useState('');
 	const [ sessionVerifier, setSessionVerifier ] = useState('');
 	const [ currentSection, setCurrentSection ] = useState(0);
@@ -158,7 +165,9 @@ export default function Login()
 						totp_token: totpToken,
 					});
 
-					console.log(authResponse.body);
+					if (authResponse.body.success) {
+						await navigate('/dashboard/');
+					}
 				} }
 			>
 				<p>

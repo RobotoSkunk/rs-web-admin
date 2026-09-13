@@ -17,20 +17,44 @@
 **/
 
 import {
-	type RouteConfig,
-	index,
-	layout,
-	prefix,
-	route,
-} from '@react-router/dev/routes';
+	useContext,
+} from 'react';
 
-export default [
-	layout('routes/auth/layout.tsx', [
-		index('routes/auth/login.tsx'),
-	]),
-	...prefix('/dashboard', [
-		layout('routes/dashboard/layout.tsx', [
-			route('/', 'routes/dashboard/home.tsx'),
-		]),
-	]),
-] satisfies RouteConfig;
+import {
+	Links,
+	Meta,
+	Outlet,
+	Scripts,
+	ScrollRestoration,
+} from 'react-router';
+
+import {
+	NonceContext,
+} from '../../contexts/nonce';
+
+import './globals.css';
+
+
+export default function Layout()
+{
+	const nonce = useContext(NonceContext);
+
+	return (
+		<html lang='en'>
+			<head>
+				<meta charSet='utf-8'/>
+				<meta name='viewport' content='width=device-width, initial-scale=1'/>
+
+				<title>Dashboard</title>
+
+				<Meta/>
+				<Links nonce={ nonce }/>
+			</head>
+			<body>
+				<Outlet/>
+				<ScrollRestoration nonce={ nonce }/>
+				<Scripts nonce={ nonce }/>
+			</body>
+		</html>
+	);
+}

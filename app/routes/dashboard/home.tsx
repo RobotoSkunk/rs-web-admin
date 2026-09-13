@@ -1,5 +1,5 @@
 /**
- * robotoskunk.com admin panel. The client admin panel of robotoskunk.com
+ * robotoskunk.com server side. The backend part of robotoskunk.com
  * Copyright (C) 2026  Edgar Lima (RobotoSkunk)
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -16,21 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
-import {
-	type RouteConfig,
-	index,
-	layout,
-	prefix,
-	route,
-} from '@react-router/dev/routes';
-
-export default [
-	layout('routes/auth/layout.tsx', [
-		index('routes/auth/login.tsx'),
-	]),
-	...prefix('/dashboard', [
-		layout('routes/dashboard/layout.tsx', [
-			route('/', 'routes/dashboard/home.tsx'),
-		]),
-	]),
-] satisfies RouteConfig;
+export default function Home()
+{
+	return (
+		<h1>:3</h1>
+	);
+}
