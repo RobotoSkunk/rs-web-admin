@@ -24,6 +24,53 @@ body {
 
 	overflow-x: hidden;
 	font-family: sans-serif;
+
+	margin: 0;
 }
 
+header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
 
+	width: 100%;
+	padding: 0;
+	margin: 0;
+
+	height: 46px;
+	background: var(--foreground);
+
+	.username {
+		display: inline-block;
+
+		padding: 0 20px;
+		color: var(--background);
+		border-right: 1px solid var(--background);
+	}
+
+	a {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		height: 100%;
+		padding: 0 20px;
+
+		color: var(--background);
+		text-decoration: none;
+
+		transition: background 0.2s;
+
+		&:hover,
+		&:focus-visible {
+			background: var(--color-tertiary);
+		}
+	}
+}
+
+main {
+	width: calc(100% - 240px);
+	margin: 0 auto;
+
+	/* background: red; */
+}

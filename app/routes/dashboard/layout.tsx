@@ -23,6 +23,7 @@ import {
 import {
 	Links,
 	Meta,
+	NavLink,
 	Outlet,
 	Scripts,
 	ScrollRestoration,
@@ -51,7 +52,23 @@ export default function Layout()
 				<Links nonce={ nonce }/>
 			</head>
 			<body>
-				<Outlet/>
+				<header>
+					<div>
+						<NavLink to='/dashboard/admins'>Administration</NavLink>
+						<NavLink to='/dashboard/blogs'>Blogs</NavLink>
+						<NavLink to='/dashboard/portfolio'>Portfolio</NavLink>
+						<NavLink to='/dashboard/illustrations'>Illustrations</NavLink>
+					</div>
+					<div>
+						<span className='username'>Username</span>
+						<NavLink to='/logout'>Log Out</NavLink>
+					</div>
+				</header>
+
+				<main>
+					<Outlet/>
+				</main>
+
 				<ScrollRestoration nonce={ nonce }/>
 				<Scripts nonce={ nonce }/>
 			</body>

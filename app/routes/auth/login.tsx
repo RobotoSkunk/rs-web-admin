@@ -35,6 +35,8 @@ import bcrypt from 'bcryptjs';
 import SRP from 'secure-remote-password/client';
 import Fetcher from '~/utils/fetcher';
 
+import style from './auth.module.css';
+
 
 const variants = {
 	start: {
@@ -160,7 +162,7 @@ export default function Login()
 					<label htmlFor='password'>Password: </label><br/>
 					<input id='password' name='password' type='password' required/>
 				</p>
-				<span className='error'>{ errorMessage }</span><br/>
+				<span className={ style.error }>{ errorMessage }</span><br/>
 				<button disabled={ busy }>
 					{ busy ? 'Loading...' : 'Continue' }
 				</button>
@@ -204,7 +206,7 @@ export default function Login()
 					<label htmlFor='totp'>TOTP Token: </label><br/>
 					<input id='totp' name='totp' required/>
 				</p>
-				<span className='error'>{ errorMessage }</span><br/>
+				<span className={ style.error }>{ errorMessage }</span><br/>
 				<button disabled={ busy }>
 					{ busy ? 'Loading...' : 'Authenticate' }
 				</button>
@@ -213,9 +215,9 @@ export default function Login()
 	];
 
 	return (
-		<div className='container'>
+		<div className={ style.container }>
 			<h1>ADMINISTRATOR'S PANEL</h1>
-			<div className='login-forms'>
+			<div className={ style['login-forms'] }>
 				<AnimatePresence initial={ false } mode='wait'>
 					<motion.div
 						variants={ variants }

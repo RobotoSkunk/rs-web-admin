@@ -32,7 +32,7 @@ import {
 	NonceContext,
 } from '../../contexts/nonce';
 
-import './globals.css';
+import style from './auth.module.css';
 
 
 export default function Layout()
@@ -50,7 +50,7 @@ export default function Layout()
 				<Meta/>
 				<Links nonce={ nonce }/>
 			</head>
-			<body>
+			<body className={ style.body }>
 				<Outlet/>
 				<ScrollRestoration nonce={ nonce }/>
 				<Scripts nonce={ nonce }/>
