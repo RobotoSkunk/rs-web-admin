@@ -17,3 +17,8 @@
 **/
 
 const API_PREFIX: string;
+
+interface Identity {
+	id: string;
+	username: string;
+}

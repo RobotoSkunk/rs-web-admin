@@ -9,6 +9,7 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.9",
     "@react-router/node": "^8",
     "@react-router/serve": "^8",
     "bcryptjs": "^3.0.3",

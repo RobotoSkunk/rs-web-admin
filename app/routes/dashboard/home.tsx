@@ -1,5 +1,5 @@
 /**
- * robotoskunk.com server side. The backend part of robotoskunk.com
+ * robotoskunk.com admin panel. The client admin panel of robotoskunk.com
  * Copyright (C) 2026  Edgar Lima (RobotoSkunk)
  * 
  * This program is free software: you can redistribute it and/or modify

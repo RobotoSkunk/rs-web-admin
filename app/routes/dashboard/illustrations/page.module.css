@@ -1,0 +1,87 @@
+/**
+ * robotoskunk.com admin panel. The client admin panel of robotoskunk.com
+ * Copyright (C) 2026  Edgar Lima (RobotoSkunk)
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+**/
+
+.row {
+	display: flex;
+	flex-direction: row;
+
+	gap: 8px;
+
+	& div {
+		display: flex;
+		flex-direction: column;
+
+		& img {
+			max-width: 500px;
+		}
+	}
+}
+
+.container {
+	display: flex;
+	flex-wrap: wrap;
+
+	gap: 8px;
+
+	& .card {
+		display: inline-flex;
+		align-items: center;
+		flex-direction: column;
+
+		border: 1px solid var(--foreground);
+		background: var(--foreground);
+		color: var(--background);
+
+		border-radius: 8px;
+		overflow: hidden;
+
+		& span {
+			margin: 4px 0;
+			font-family: monospace;
+			font-size: 1.1em;
+		}
+
+		& a {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+
+			color: var(--background);
+
+			width: 100%;
+			padding: 4px 0;
+		}
+
+		&.new {
+			justify-content: center;
+
+			text-decoration: none;
+			width: 120px;
+		}
+
+		& a,
+		&.new {
+			transition: background 0.2s;
+
+			&:hover,
+			&:focus-visible {
+				background: var(--color-tertiary);
+			}
+		}
+	}
+}

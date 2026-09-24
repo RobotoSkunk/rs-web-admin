@@ -17,21 +17,11 @@
 **/
 
 import {
-	type RouteConfig,
-	index,
-	layout,
-	prefix,
-	route,
-} from '@react-router/dev/routes';
+	createContext,
+} from 'react';
 
-export default [
-	layout('routes/auth/layout.tsx', [
-		index('routes/auth/login.tsx'),
-	]),
-	...prefix('/dashboard', [
-		layout('routes/dashboard/layout.tsx', [
-			route('/', 'routes/dashboard/home.tsx'),
-			route('illustrations', 'routes/dashboard/illustrations/index.tsx'),
-		]),
-	]),
-] satisfies RouteConfig;
+
+export const IdentityContext = createContext<Identity | null>({
+	id: '',
+	username: '',
+});

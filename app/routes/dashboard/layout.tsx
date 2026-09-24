@@ -18,6 +18,8 @@
 
 import {
 	useContext,
+	useEffect,
+	useState,
 } from 'react';
 
 import {
@@ -33,12 +35,38 @@ import {
 	NonceContext,
 } from '../../contexts/nonce';
 
+import {
+	IdentityContext,
+} from '@/contexts/identity';
+
+import Fetcher from '@/utils/fetcher';
+
 import './globals.css';
 
 
 export default function Layout()
 {
 	const nonce = useContext(NonceContext);
+	const [ identity, setIdentity ] = useState<Identity | null>(null);
+
+	useEffect(() =>
+	{
+		let stop = false;
+
+		(async () =>
+		{
+			const result = await Fetcher.get<Identity>('identity');
+
+			if (!stop && result.status === 200) {
+				setIdentity(result.body);
+			}
+		})();
+
+		return () =>
+		{
+			stop = true;
+		};
+	}, [ ]);
 
 	return (
 		<html lang='en'>
@@ -60,13 +88,15 @@ export default function Layout()
 						<NavLink to='/dashboard/illustrations'>Illustrations</NavLink>
 					</div>
 					<div>
-						<span className='username'>Username</span>
+						<span className='username'>{ identity?.username }</span>
 						<NavLink to='/logout'>Log Out</NavLink>
 					</div>
 				</header>
 
 				<main>
-					<Outlet/>
+					<IdentityContext.Provider value={ identity }>
+						<Outlet/>
+					</IdentityContext.Provider>
 				</main>
 
 				<ScrollRestoration nonce={ nonce }/>

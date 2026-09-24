@@ -21,7 +21,6 @@ import {
 } from 'react';
 
 import {
-	redirect,
 	useNavigate,
 } from 'react-router';
 
@@ -33,7 +32,7 @@ import {
 
 import bcrypt from 'bcryptjs';
 import SRP from 'secure-remote-password/client';
-import Fetcher from '~/utils/fetcher';
+import Fetcher from '@/utils/fetcher';
 
 import style from './auth.module.css';
 
