@@ -22,3 +22,5 @@ interface Identity {
 	id: string;
 	username: string;
 }
+
+type UUID = `${string}-${string}-${string}-${string}-${string}`

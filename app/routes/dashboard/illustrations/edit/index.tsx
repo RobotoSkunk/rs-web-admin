@@ -22,6 +22,10 @@ import {
 	useState,
 } from 'react';
 
+import {
+	useImmer,
+} from 'use-immer';
+
 import type {
 	Route,
 } from './+types/index';
@@ -30,8 +34,15 @@ import Fetcher from '@/utils/fetcher';
 
 import style from './page.module.css';
 
+type Alt = {
+	id: UUID;
+	lang: string;
+	content: string;
+	description: string;
+};
+
 type Illustration = {
-	id: string;
+	id: UUID;
 	filename: string;
 	filename_small: string;
 	size: {
@@ -41,92 +52,13 @@ type Illustration = {
 	uploaded_at: string;
 	created_at: string;
 	hidden: boolean;
+	alts: Alt[];
 };
-
-function DescriptionRow({
-	lang,
-	name,
-	description,
-	mode,
-
-	onCancel,
-}: {
-	lang?: string;
-	name?: string;
-	description?: string;
-	mode: 'editing' | 'creating';
-
-	onCancel?: () => void;
-})
-{
-	const id = crypto.randomUUID();
-	const [ editing, setEditing ] = useState(false);
-	const formRef = useRef<HTMLFormElement>(null);
-
-	return (
-		<form className={ style.row } ref={ formRef }>
-			<div className={ style.header }>
-				<div>
-					<label htmlFor={ `lang-${id}` }>Lang</label>
-					<select
-						id={ `lang-${id}` }
-						defaultValue={ lang }
-						onChange={ () => setEditing(true) }
-					>
-						<option value='en-US'>en-US</option>
-						<option value='es-MX'>es-MX</option>
-					</select>
-				</div>
-
-				<div>
-					<label htmlFor={ `name-${id}` }>Name</label>
-					<input
-						id={ `name-${id}` }
-						type='text'
-						defaultValue={ name }
-						onInput={ () => setEditing(true) }
-					/>
-				</div>
-			</div>
-
-			<div className={ style.body }>
-				<label htmlFor={ `desc-${id}` }>Description (alt)</label>
-				<textarea
-					id={ `desc-${id}` }
-					defaultValue={ description }
-					onInput={ () => setEditing(true) }
-				/>
-			</div>
-
-			<div className={ style.footer }>
-				{ mode === 'editing' && editing && <>
-					<button
-						role='button'
-						onClick={ (ev) =>
-						{
-							ev.preventDefault();
-
-							formRef.current?.reset();
-							setEditing(false);
-						} }
-					>
-						Cancel
-					</button>
-					<button>Update</button>
-				</> }
-				{ mode === 'creating' && <>
-					<button onClick={ onCancel }>Cancel</button>
-					<button>Upload</button>
-				</> }
-			</div>
-		</form>
-	);
-}
 
 export default function Page({ params }: Route.LoaderArgs)
 {
 	const [ creating, setCreating ] = useState(false);
-	const [ data, setData ] = useState<Illustration | null>(null);
+	const [ data, setData ] = useImmer<Illustration | null>(null);
 
 	useEffect(() =>
 	{
@@ -154,6 +86,167 @@ export default function Page({ params }: Route.LoaderArgs)
 		);
 	}
 
+
+	function DescriptionRow({
+		altId,
+		lang,
+		name,
+		description,
+		mode,
+	}: {
+		altId?: string;
+		lang?: string;
+		name?: string;
+		description?: string;
+		mode: 'editing' | 'creating';
+	})
+	{
+		const id = crypto.randomUUID();
+		const [ editing, setEditing ] = useState(false);
+		const formRef = useRef<HTMLFormElement>(null);
+
+		return (
+			<form
+				className={ style.row }
+				ref={ formRef }
+
+				onSubmit={ async (ev) =>
+				{
+					ev.preventDefault();
+					const form = ev.currentTarget;
+
+					if (!form.checkValidity()) {
+						form.reportValidity();
+						return;
+					}
+
+					const formData = new FormData(form);
+
+					if (mode === 'creating') {
+						const response = await Fetcher.post<{
+							id: UUID
+						}>(
+							`illustrations/${params.id}/alt`,
+							Object.fromEntries(formData)
+						);
+
+						if (response.status === 200) {
+							setData(data =>
+							{
+								if (!data) {
+									return;
+								}
+
+								data.alts = [
+									...data.alts,
+									{
+										id: response.body.id,
+										lang: formData.get('lang') as string,
+										content: formData.get('content') as string,
+										description: formData.get('description') as string,
+									}
+								];
+							});
+
+							setCreating(false);
+						}
+					} else {
+						const response = await Fetcher.put(`illustrations/alt/${altId}`, Object.fromEntries(formData));
+
+						if (response.status === 200) {
+							setData(data =>
+							{
+								if (!data) {
+									return;
+								}
+
+								data.alts = [
+									...data.alts.filter(a => a.id !== altId),
+									{
+										id: altId as UUID,
+										lang: formData.get('lang') as string,
+										content: formData.get('content') as string,
+										description: formData.get('description') as string,
+									}
+								];
+							});
+
+							setCreating(false);
+						}
+					}
+				} }
+			>
+				<div className={ style.header }>
+					<div>
+						<label htmlFor={ `lang-${id}` }>Lang</label>
+						<select
+							id={ `lang-${id}` }
+							name='lang'
+							defaultValue={ lang }
+							onChange={ () => setEditing(true) }
+						>
+							<option value='en-US'>en-US</option>
+							<option value='es-MX'>es-MX</option>
+						</select>
+					</div>
+
+					<div>
+						<label htmlFor={ `name-${id}` }>Name</label>
+						<input
+							type='text'
+							id={ `name-${id}` }
+							name='content'
+							defaultValue={ name }
+							onInput={ () => setEditing(true) }
+						/>
+					</div>
+				</div>
+
+				<div className={ style.body }>
+					<label htmlFor={ `desc-${id}` }>Description (alt)</label>
+					<textarea
+						id={ `desc-${id}` }
+						name='description'
+						defaultValue={ description }
+						onInput={ () => setEditing(true) }
+					/>
+				</div>
+
+				<div className={ style.footer }>
+					{ mode === 'editing' && <>
+						<button
+							role='button'
+							onClick={ async (ev) =>
+							{
+								ev.preventDefault();
+								await Fetcher.delete(`illustrations/alt/${altId}`);
+
+								setData(data =>
+								{
+									if (!data) {
+										return;
+									}
+
+									data.alts = data.alts.filter(a => a.id !== altId);
+								});
+							} }
+						>
+							Delete
+						</button>
+					</> }
+					{ mode === 'editing' && editing && <>
+						<button>Update</button>
+					</> }
+					{ mode === 'creating' && <>
+						<button role='button' onClick={ () => setCreating(false) }>Cancel</button>
+						<button>Upload</button>
+					</> }
+				</div>
+			</form>
+		);
+	}
+
+
 	return (<>
 		<h1>Illustration ({ params.id })</h1>
 		<div className={ style.container }>
@@ -170,16 +263,28 @@ export default function Page({ params }: Route.LoaderArgs)
 				<span>Hidden: { data.hidden ? 'true' : 'false' }</span>
 			</div>
 			<div className={ style.alts }>
-				<DescriptionRow mode='editing'/>
-				<DescriptionRow mode='editing'/>
-				<DescriptionRow mode='editing'/>
+				{ data.alts.map((alt, i) =>
+				(
+					<DescriptionRow
+						key={ i }
+						mode='editing'
+						altId={ alt.id }
+						lang={ alt.lang }
+						name={ alt.content }
+						description={ alt.description }
+					/>
+				)) }
 
 				{ !creating &&
 					<button onClick={ () => setCreating(true) }>
 						Add
 					</button>
 				}
-				{ creating && <DescriptionRow mode='creating' onCancel={ () => setCreating(false) }/> }
+				{ creating &&
+					<DescriptionRow
+						mode='creating'
+					/>
+				}
 			</div>
 		</div>
 	</>);
