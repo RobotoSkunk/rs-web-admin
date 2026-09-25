@@ -18,7 +18,8 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router": "^8",
-    "secure-remote-password": "^0.3.1"
+    "secure-remote-password": "^0.3.1",
+    "use-immer": "^0.11.0"
   },
   "devDependencies": {
     "@react-router/dev": "^8",

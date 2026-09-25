@@ -66,7 +66,6 @@ export default function Page()
 
 			if (!stop && result.status === 200) {
 				setList(result.body);
-				console.log(result.body);
 			}
 		})();
 
@@ -81,6 +80,13 @@ export default function Page()
 		<section>
 			<h1>Illustrations</h1>
 			<div className={ style.container }>
+				<Link to='new' className={ `${style.card} ${style.new}` }>
+					<img
+						src={ plusIcon }
+						width={ 50 }
+						height={ 50 }
+					/>
+				</Link>
 				{ list.map((illustration, i) =>
 				(
 					<div className={ style.card } key={ i }>
@@ -93,14 +99,6 @@ export default function Page()
 						<Link to={ illustration.id }>Manage</Link>
 					</div>
 				)) }
-
-				<Link to='new' className={ `${style.card} ${style.new}` }>
-					<img
-						src={ plusIcon }
-						width={ 50 }
-						height={ 50 }
-					/>
-				</Link>
 			</div>
 		</section>
 		<section>

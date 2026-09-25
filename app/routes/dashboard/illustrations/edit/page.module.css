@@ -16,23 +16,55 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
-import {
-	type RouteConfig,
-	index,
-	layout,
-	prefix,
-	route,
-} from '@react-router/dev/routes';
+.container {
+	display: flex;
+	flex-direction: row;
 
-export default [
-	layout('routes/auth/layout.tsx', [
-		index('routes/auth/login.tsx'),
-	]),
-	...prefix('/dashboard', [
-		layout('routes/dashboard/layout.tsx', [
-			route('/', 'routes/dashboard/home.tsx'),
-			route('illustrations', 'routes/dashboard/illustrations/index.tsx'),
-			route('illustrations/:id', 'routes/dashboard/illustrations/edit/index.tsx'),
-		]),
-	]),
-] satisfies RouteConfig;
+	gap: 12px;
+}
+
+.info,
+.alts {
+	display: flex;
+	flex-direction: column;
+}
+
+.info {
+	gap: 8px;
+}
+
+.alts {
+	flex-grow: 1;
+	gap: 12px;
+
+	& .row {
+		display: flex;
+		flex-direction: column;
+
+		border: 1px solid var(--foreground);
+		padding: 8px;
+		border-radius: 8px;
+
+		gap: 8px;
+
+		& .header,
+		& .body,
+		& .footer {
+			display: flex;
+		}
+
+		& .header {
+			flex-direction: row;
+			gap: 16px;
+		}
+
+		& .body {
+			flex-direction: column;
+		}
+
+		& .footer {
+			flex-direction: row;
+			gap: 8px;
+		}
+	}
+}
