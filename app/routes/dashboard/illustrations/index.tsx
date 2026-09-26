@@ -26,12 +26,21 @@ import {
 	Link,
 } from 'react-router';
 
+import {
+	useImmer,
+} from 'use-immer';
+
 import Fetcher from '@/utils/fetcher';
 import CanvasManipulator from '@/utils/canvas-manipulator';
 
 import plusIcon from '@/assets/img/plus.svg';
 
+import ImageInput from '@/components/ImageInput';
+import Modal from '@/components/Modal';
+import Checkbox from '@/components/Checkbox';
+
 import style from './page.module.css';
+
 
 type Illustration = {
 	id: string;
@@ -43,18 +52,13 @@ type Illustration = {
 	hidden: boolean;
 };
 
-const allowedTypes = [
-	'image/png',
-	'image/jpeg',
-	'image/webp',
-];
-
 export default function Page()
 {
-	const [ list, setList ] = useState<Illustration[]>([]);
+	const [ modalOpen, setModalOpen ] = useState(false);
+	const [ list, setList ] = useImmer<Illustration[]>([]);
 
-	const imgOriginal = useRef<HTMLImageElement>(null);
-	const imgScaled = useRef<HTMLImageElement>(null);
+	const inputPicture = useRef<HTMLInputElement>(null);
+	const inputPictureSmall = useRef<HTMLInputElement>(null);
 
 	useEffect(() =>
 	{
@@ -62,7 +66,7 @@ export default function Page()
 
 		(async () =>
 		{
-			const result = await Fetcher.get<Illustration[]>('illustrations/list');
+			const result = await Fetcher.get<Illustration[]>('illustrations');
 
 			if (!stop && result.status === 200) {
 				setList(result.body);
@@ -77,103 +81,132 @@ export default function Page()
 
 
 	return (<>
-		<section>
-			<h1>Illustrations</h1>
-			<div className={ style.container }>
-				<Link to='new' className={ `${style.card} ${style.new}` }>
-					<img
-						src={ plusIcon }
-						width={ 50 }
-						height={ 50 }
-					/>
-				</Link>
-				{ list.map((illustration, i) =>
-				(
-					<div className={ style.card } key={ i }>
-						<img
-							src={ `${API_PREFIX}/assets/${illustration.filename}` }
-							width={ illustration.size.x }
-							height={ illustration.size.y }
-						/>
-						<span>{ illustration.id }</span>
-						<Link to={ illustration.id }>Manage</Link>
-					</div>
-				)) }
-			</div>
-		</section>
-		<section>
-			<h2>Publish</h2>
-			<form
-				onSubmit={ async (ev) =>
-				{
-					ev.preventDefault();
-
-
-					const data = {
-						picture: imgOriginal.current!.src,
-						picture_small: imgScaled.current!.src,
-					};
-
-					await Fetcher.post('illustrations/upload', data);
-				} }
+		<h1>Illustrations</h1>
+		<div className={ style.container }>
+			<button
+				className={ `${style.card} ${style.new}` }
+				onClick={ () => setModalOpen(true) }
 			>
-				<input type='file'
-					onChange={ async (ev) =>
-					{
-						const files = ev.currentTarget.files;
+				<img
+					src={ plusIcon }
+					width={ 50 }
+					height={ 50 }
+				/>
+			</button>
+			{ list.map((illustration, i) =>
+			(
+				<div className={ style.card } key={ i }>
+					<img
+						src={ `${API_PREFIX}/assets/${illustration.filename}` }
+						width={ illustration.size.x }
+						height={ illustration.size.y }
+					/>
+					<span>{ illustration.id }</span>
+					<Checkbox
+						defaultChecked={ !illustration.hidden }
+						onChange={ async (ev) =>
+						{
+							const checked = ev.currentTarget.checked;
 
-						if (!files) {
+							await Fetcher.patch(`illustrations/${illustration.id}`, {
+								hidden: !checked,
+							});
+						} }
+					/>
+					<Link to={ illustration.id }>Manage</Link>
+				</div>
+			)) }
+		</div>
+
+		{ modalOpen &&
+			<Modal
+				onClose={ () => setModalOpen(false) }
+			>
+				<form
+					className={ style.form }
+					onSubmit={ async (ev) =>
+					{
+						ev.preventDefault();
+
+						if (!ev.currentTarget.checkValidity()) {
+							ev.currentTarget.reportValidity();
 							return;
 						}
 
-						const file = files[0]!;
-						const fileUrl = URL.createObjectURL(file);
+						const formData = new FormData(ev.currentTarget);
+						const toSend = Object.fromEntries(formData);
 
-						const img = new Image();
-						img.src = fileUrl;
+						const response = await Fetcher.post<Illustration & { success: boolean }>('illustrations', toSend);
 
-						async function onLoad()
-						{
-							img.removeEventListener('load', onLoad);
-
-							const canvasOriginal = document.createElement('canvas');
-							canvasOriginal.width = img.width;
-							canvasOriginal.height = img.height;
-
-							const context = canvasOriginal.getContext('2d')!;
-							context.drawImage(img, 0, 0);
-
-							const imgData = canvasOriginal.toDataURL();
-							const imgSmallData = await CanvasManipulator.processImage(file, {
-								size: 350,
-								axis: 'y',
-								type: 'webp',
-								quality: 0.75,
+						if (response.status === 200 && response.body.success) {
+							setList(list =>
+							{
+								list.unshift({
+									id: response.body.id,
+									filename: response.body.filename,
+									size: response.body.size,
+									hidden: true,
+								});
 							});
 
-							imgOriginal.current!.src = imgData;
-							imgScaled.current!.src = imgSmallData;
+							setModalOpen(false);
 						}
-
-						img.addEventListener('load', onLoad);
 					} }
-				/>
+				>
+					<h2>Upload image</h2>
+					<input type='hidden' name='picture' ref={ inputPicture }/>
+					<input type='hidden' name='picture_small' ref={ inputPictureSmall }/>
 
-				<div className={ style.row }>
-					<div>
-						<span>Original</span>
-						<img ref={ imgOriginal }/>
-					</div>
-					<div>
-						<span>Scaled (small)</span>
-						<img ref={ imgScaled }/>
-					</div>
-				</div>
+					<ImageInput
+						onChange={ async (ev) =>
+						{
+							if (!ev.currentTarget.files) {
+								return;
+							}
 
-				<button>
-					Submit
-				</button>
-			</form>
-		</section>
+							const file = ev.currentTarget.files[0]!;
+							const fileUrl = URL.createObjectURL(file);
+
+							const img = new Image();
+							img.src = fileUrl;
+
+							async function onLoad()
+							{
+								img.removeEventListener('load', onLoad);
+
+								const canvasOriginal = document.createElement('canvas');
+								canvasOriginal.width = img.width;
+								canvasOriginal.height = img.height;
+
+								const context = canvasOriginal.getContext('2d')!;
+								context.drawImage(img, 0, 0);
+
+								const imgData = canvasOriginal.toDataURL();
+								const imgSmallData = await CanvasManipulator.processImage(file, {
+									size: 350,
+									axis: 'y',
+									type: 'webp',
+									quality: 0.75,
+								});
+
+								inputPicture.current!.value = imgData;
+								inputPictureSmall.current!.value = imgSmallData;
+							}
+
+							img.addEventListener('load', onLoad);
+						} }
+					/>
+					<label className={ style.date }>
+						<span>Created At</span>
+						<br/>
+						<input type='date' name='created_at' required/>
+					</label>
+
+					<button>
+						Upload
+					</button>
+				</form>
+			</Modal>
+		}
 	</>);
 }

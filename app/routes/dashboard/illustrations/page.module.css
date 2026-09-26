@@ -50,6 +50,12 @@
 		border-radius: 8px;
 		overflow: hidden;
 
+		& img {
+			max-width: 350px;
+
+			object-fit: cover;
+		}
+
 		& span {
 			margin: 4px 0;
 			font-family: monospace;
@@ -83,5 +89,21 @@
 				background: var(--color-tertiary);
 			}
 		}
+	}
+}
+
+.form {
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+
+	gap: 8px;
+
+	& h2 {
+		margin: 0;
+	}
+
+	& .date {
+		text-align: center;
 	}
 }

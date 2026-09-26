@@ -33,6 +33,8 @@ import type {
 import Fetcher from '@/utils/fetcher';
 
 import style from './page.module.css';
+import Checkbox from '@/components/Checkbox';
+import { Link, useNavigate } from 'react-router';
 
 type Alt = {
 	id: UUID;
@@ -57,7 +59,12 @@ type Illustration = {
 
 export default function Page({ params }: Route.LoaderArgs)
 {
+	const navigator = useNavigate();
+
+	const createdAtRef = useRef<HTMLInputElement>(null);
+
 	const [ creating, setCreating ] = useState(false);
+	const [ dateChanged, setDateChanged ] = useState(false);
 	const [ data, setData ] = useImmer<Illustration | null>(null);
 
 	useEffect(() =>
@@ -151,7 +158,7 @@ export default function Page({ params }: Route.LoaderArgs)
 							setCreating(false);
 						}
 					} else {
-						const response = await Fetcher.put(`illustrations/alt/${altId}`, Object.fromEntries(formData));
+						const response = await Fetcher.patch(`illustrations/alt/${altId}`, Object.fromEntries(formData));
 
 						if (response.status === 200) {
 							setData(data =>
@@ -167,7 +174,7 @@ export default function Page({ params }: Route.LoaderArgs)
 										lang: formData.get('lang') as string,
 										content: formData.get('content') as string,
 										description: formData.get('description') as string,
-									}
+									},
 								];
 							});
 
@@ -246,21 +253,93 @@ export default function Page({ params }: Route.LoaderArgs)
 		);
 	}
 
+	function getSize()
+	{
+		const size = { ...data!.size };
+
+		if (size.x > size.y) {
+			let aspectRatio = size.y / size.x;
+
+			size.x = 350;
+			size.y = 350 * aspectRatio;
+		}
+
+		return size;
+	}
 
 	return (<>
-		<h1>Illustration ({ params.id })</h1>
+		<div>
+			<Link to='/dashboard/illustrations'>&lt;--</Link>
+			<h1>Illustration ({ params.id })</h1>
+		</div>
 		<div className={ style.container }>
 			<div className={ style.info }>
 				<img
 					src={ `${API_PREFIX}/assets/${data.filename_small}` }
-					width={ data.size.x }
-					height={ data.size.y }
+					width={ getSize().x }
+					height={ getSize().y }
 				/>
 				<a href={ `${API_PREFIX}/assets/${data.filename_small}` } target='_blank'>Scaled Image</a>
 				<a href={ `${API_PREFIX}/assets/${data.filename}` } target='_blank'>Original Image</a>
-				<span>Created At: { data.created_at }</span>
+
+				<Checkbox
+					defaultChecked={ !data.hidden }
+					onChange={ async (ev) =>
+					{
+						const checked = ev.currentTarget.checked;
+
+						await Fetcher.patch(`illustrations/${params.id}`, {
+							hidden: !checked,
+						});
+					} }
+				>
+					Public
+				</Checkbox>
+
+				<div>
+					<span>
+						Created At: { ' ' }
+					</span>
+					<input
+						type='date'
+						defaultValue={ data.created_at }
+						ref={ createdAtRef }
+
+						onChange={ () => {
+							setDateChanged(true);
+						} }
+					/>
+
+					{ dateChanged &&
+						<button
+							onClick={ async () =>
+							{
+								await Fetcher.patch(`illustrations/${params.id}`, {
+									created_at: createdAtRef.current!.value,
+								});
+
+								setDateChanged(false);
+							} }
+						>
+							Save
+						</button>
+					}
+				</div>
 				<span>Uploaded At: { data.uploaded_at }</span>
-				<span>Hidden: { data.hidden ? 'true' : 'false' }</span>
+
+				<button
+					onClick={ async () =>
+					{
+						const response = confirm('Are you sure you want to delete this illustration forever?');
+
+						if (response) {
+							await Fetcher.delete(`illustrations/${params.id}`);
+							await navigator('/dashboard/illustrations');
+						}
+					} }
+				>
+					Delete
+				</button>
 			</div>
 			<div className={ style.alts }>
 				{ data.alts.map((alt, i) =>
