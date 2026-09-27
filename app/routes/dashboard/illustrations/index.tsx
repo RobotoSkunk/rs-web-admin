@@ -103,6 +103,7 @@ export default function Page()
 					/>
 					<span>{ illustration.id }</span>
 					<Checkbox
+						key={ illustration.id }
 						defaultChecked={ !illustration.hidden }
 						onChange={ async (ev) =>
 						{
@@ -110,6 +111,15 @@ export default function Page()
 
 							await Fetcher.patch(`illustrations/${illustration.id}`, {
 								hidden: !checked,
+							});
+
+							setList(list =>
+							{
+								const tmp = list.find(_i => _i.id === illustration.id);
+
+								if (tmp) {
+									tmp.hidden = !checked;
+								}
 							});
 						} }
 					/>
@@ -139,15 +149,15 @@ export default function Page()
 						const response = await Fetcher.post<Illustration & { success: boolean }>('illustrations', toSend);
 
 						if (response.status === 200 && response.body.success) {
-							setList(list =>
-							{
-								list.unshift({
+							setList([
+								{
 									id: response.body.id,
 									filename: response.body.filename,
 									size: response.body.size,
 									hidden: true,
-								});
-							});
+								},
+								...list,
+							]);
 
 							setModalOpen(false);
 						}
