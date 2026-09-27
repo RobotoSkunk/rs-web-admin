@@ -16,24 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
-import {
-	type RouteConfig,
-	index,
-	layout,
-	prefix,
-	route,
-} from '@react-router/dev/routes';
-
-export default [
-	layout('routes/auth/layout.tsx', [
-		index('routes/auth/login.tsx'),
-	]),
-	...prefix('/dashboard', [
-		layout('routes/dashboard/layout.tsx', [
-			route('/', 'routes/dashboard/home.tsx'),
-			route('portfolio', 'routes/dashboard/portfolio/index.tsx'),
-			route('illustrations', 'routes/dashboard/illustrations/index.tsx'),
-			route('illustrations/:id', 'routes/dashboard/illustrations/edit/index.tsx'),
-		]),
-	]),
-] satisfies RouteConfig;
+export default function Page()
+{
+	return (<></>);
+}
