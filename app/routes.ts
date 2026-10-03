@@ -32,6 +32,7 @@ export default [
 		layout('routes/dashboard/layout.tsx', [
 			route('/', 'routes/dashboard/home.tsx'),
 			route('portfolio', 'routes/dashboard/portfolio/index.tsx'),
+			route('portfolio/:id', 'routes/dashboard/portfolio/edit/index.tsx'),
 			route('illustrations', 'routes/dashboard/illustrations/index.tsx'),
 			route('illustrations/:id', 'routes/dashboard/illustrations/edit/index.tsx'),
 		]),

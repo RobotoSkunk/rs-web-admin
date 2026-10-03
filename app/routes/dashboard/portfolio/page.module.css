@@ -17,54 +17,51 @@
 **/
 
 .container {
-	display: flex;
-	flex-direction: row;
+	display: block;
+	padding: 0;
+	margin: 0;
 
-	gap: 12px;
-}
-
-.info,
-.alts {
-	display: flex;
-	flex-direction: column;
-}
-
-.info {
-	gap: 8px;
-}
-
-.alts {
-	flex-grow: 1;
-	gap: 12px;
-
-	& .row {
+	& .project {
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 
+		margin: 12px 0;
+		gap: 8px;
+		cursor: grab;
+
+		background: var(--background);
 		border: 1px solid var(--primary-200);
 		padding: 8px;
 		border-radius: 8px;
 
-		gap: 8px;
-
-		& .header,
-		& .body,
-		& .footer {
+		& .borders {
 			display: flex;
-		}
-
-		& .header {
-			flex-direction: row;
-			gap: 16px;
+			align-items: center;
+			justify-content: center;
 		}
 
 		& .body {
+			display: flex;
 			flex-direction: column;
+
+			flex-grow: 1;
+
+			& .comment {
+				font-size: 1.2em;
+				font-weight: bold;
+			}
 		}
 
-		& .footer {
+		& .header {
+			display: flex;
+			align-items: center;
 			flex-direction: row;
+
 			gap: 8px;
+
+			& img {
+				border-radius: 8px;
+			}
 		}
 	}
 }

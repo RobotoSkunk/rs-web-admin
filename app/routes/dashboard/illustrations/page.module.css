@@ -43,17 +43,20 @@
 		align-items: center;
 		flex-direction: column;
 
-		border: 1px solid var(--foreground);
-		background: var(--foreground);
-		color: var(--background);
+		border: 1px solid var(--primary-200);
+		background: var(--background);
+		color: var(--foreground);
 
 		border-radius: 8px;
 		overflow: hidden;
 
 		& img {
 			max-width: 350px;
-
 			object-fit: cover;
+
+			&.preview {
+				border-bottom: 1px solid var(--primary-200);
+			}
 		}
 
 		& span {
@@ -67,7 +70,7 @@
 			align-items: center;
 			justify-content: center;
 
-			color: var(--background);
+			color: var(--foreground);
 
 			width: 100%;
 			padding: 4px 0;
@@ -86,7 +89,7 @@
 
 			&:hover,
 			&:focus-visible {
-				background: var(--color-tertiary);
+				background: var(--primary-100);
 			}
 		}
 	}

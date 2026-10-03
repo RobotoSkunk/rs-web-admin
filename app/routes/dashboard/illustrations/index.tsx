@@ -97,6 +97,7 @@ export default function Page()
 			(
 				<div className={ style.card } key={ i }>
 					<img
+						className={ style.preview }
 						src={ `${API_PREFIX}/assets/${illustration.filename}` }
 						width={ illustration.size.x }
 						height={ illustration.size.y }

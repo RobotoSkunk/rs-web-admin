@@ -17,9 +17,13 @@
 **/
 
 :root {
-	--foreground: #1e293b;
-	--background: #f8fafc;
+	--primary-000: #151c28;
+	--primary-100: #282f3a;
+	--primary-200: #525862;
 
-	--color-secondary: #94a3b8;
-	--color-tertiary: #475569;
+	--background: var(--primary-000);
+	--background-accent: var(--primary-100);
+	--background-hover: var(--primary-200);
+
+	--foreground: #ffffff;
 }

@@ -26,15 +26,20 @@ import {
 	useImmer,
 } from 'use-immer';
 
+import {
+	Link,
+	useNavigate,
+} from 'react-router';
+
 import type {
 	Route,
 } from './+types/index';
 
 import Fetcher from '@/utils/fetcher';
+import Checkbox from '@/components/Checkbox';
 
 import style from './page.module.css';
-import Checkbox from '@/components/Checkbox';
-import { Link, useNavigate } from 'react-router';
+
 
 type Alt = {
 	id: UUID;
