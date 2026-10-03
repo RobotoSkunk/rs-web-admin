@@ -22,6 +22,10 @@ import {
 	useState,
 } from 'react';
 
+import {
+	useImmer,
+} from 'use-immer';
+
 import type {
 	Route,
 } from './+types/index';
@@ -56,6 +60,7 @@ type Project = {
 		};
 	}[];
 	contents: {
+		id: UUID;
 		lang: string;
 		name: string;
 		description: string;
@@ -64,7 +69,7 @@ type Project = {
 
 export default function Page({ params }: Route.LoaderArgs)
 {
-	const [ data, setData ] = useState<Project | null>(null);
+	const [ data, setData ] = useImmer<Project | null>(null);
 	const [ creatingContent, setCreatingContent ] = useState(false);
 
 	useEffect(() =>
@@ -118,6 +123,69 @@ export default function Page({ params }: Route.LoaderArgs)
 			<form
 				className={ style.row }
 				ref={ formRef }
+
+				onSubmit={ async (ev) =>
+				{
+					ev.preventDefault();
+					const form = ev.currentTarget;
+
+					if (!form.checkValidity()) {
+						form.reportValidity();
+						return;
+					}
+
+					const formData = new FormData(form);
+
+					if (mode === 'creating') {
+						const response = await Fetcher.post<{
+							id: UUID
+						}>(
+							`projects/${params.id}/content`,
+							Object.fromEntries(formData)
+						);
+
+						if (response.status === 200) {
+							setData(data =>
+							{
+								if (!data) {
+									return;
+								}
+
+								data.contents.push({
+									id: response.body.id,
+									lang: formData.get('lang') as string,
+									name: formData.get('name') as string,
+									description: formData.get('description') as string,
+								});
+							});
+
+							setCreatingContent(false);
+						}
+					} else {
+						const response = await Fetcher.patch(`projects/content/${contentId}`, Object.fromEntries(formData));
+
+						if (response.status === 200) {
+							setData(data =>
+							{
+								if (!data) {
+									return;
+								}
+
+								data.contents = [
+									...data.contents.filter(c => c.id !== contentId),
+									{
+										id: contentId as UUID,
+										lang: formData.get('lang') as string,
+										name: formData.get('name') as string,
+										description: formData.get('description') as string,
+									},
+								];
+							});
+
+							setCreatingContent(false);
+						}
+					}
+				} }
 			>
 				<div className={ style.header }>
 					<div>
@@ -178,6 +246,20 @@ export default function Page({ params }: Route.LoaderArgs)
 					{ mode === 'editing' && <>
 						<button
 							role='button'
+							onClick={ async (ev) =>
+							{
+								ev.preventDefault();
+								await Fetcher.delete(`projects/content/${contentId}`);
+
+								setData(data =>
+								{
+									if (!data) {
+										return;
+									}
+
+									data.contents = data.contents.filter(c => c.id !== contentId);
+								});
+							} }
 						>
 							Delete
 						</button>
@@ -217,11 +299,23 @@ export default function Page({ params }: Route.LoaderArgs)
 			<section>
 				<h2>Contents</h2>
 
-				{ creatingContent &&
-					<div className={ style.contents }>
+				<div className={ style.contents }>
+					{ data.contents.map((content, i) =>
+					(
+						<ContentRow
+							key={ i }
+							mode='editing'
+							contentId={ content.id }
+							lang={ content.lang }
+							name={ content.name }
+							description={ content.description }
+						/>
+					)) }
+
+					{ creatingContent &&
 						<ContentRow mode='creating'/>
-					</div>
-				}
+					}
+				</div>
 				{ !creatingContent &&
 					<button onClick={ () => setCreatingContent(true) }>
 						Create

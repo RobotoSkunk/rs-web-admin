@@ -132,18 +132,15 @@ export default function Page()
 									alt=''
 									draggable={ false }
 								/>
-								<span className={ style.comment }>
-									{ project.comment }
-								</span>
+								<Link to={ `/dashboard/portfolio/${project.id}` }>
+									<span className={ style.comment }>
+										{ project.comment }
+									</span>
+								</Link>
 							</div>
 							<span>
 								[ ] { project.hidden ? 'Hidden' : 'Public' }
 							</span>
-						</div>
-						<div className={ style.borders }>
-							<Link to={ `/dashboard/portfolio/${project.id}` }>
-								Manage
-							</Link>
 						</div>
 					</Reorder.Item>
 				)) }
