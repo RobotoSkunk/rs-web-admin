@@ -38,12 +38,15 @@ import type {
 	Route,
 } from './+types/index';
 
+import {
+	langOptions,
+} from '@/utils/common';
+
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import Fetcher from '@/utils/fetcher';
 import Checkbox from '@/components/Checkbox';
-import ImageInput from '@/components/ImageInput';
 import CanvasManipulator from '@/utils/canvas-manipulator';
 
 import draggerIcon from '@/assets/img/dragger.svg';
@@ -91,6 +94,47 @@ type Project = ProjectData & {
 	contents: ProjectContent[];
 };
 
+type PictureInput = {
+	picture: string,
+	picture_small: string,
+};
+
+async function loadImage(file: File)
+{
+	return new Promise<string[]>((resolve) =>
+	{
+		const img = new Image();
+		img.src = URL.createObjectURL(file);
+
+		async function onLoad()
+		{
+			img.removeEventListener('load', onLoad);
+
+			const canvasOriginal = document.createElement('canvas');
+			canvasOriginal.width = img.width;
+			canvasOriginal.height = img.height;
+
+			const context = canvasOriginal.getContext('2d')!;
+			context.drawImage(img, 0, 0);
+
+			const imgData = canvasOriginal.toDataURL();
+			const imgSmallData = await CanvasManipulator.processImage(file, {
+				size: 250,
+				axis: 'y',
+				type: 'webp',
+				quality: 0.75,
+			});
+
+			resolve([
+				imgData,
+				imgSmallData,
+			]);
+		}
+
+		img.addEventListener('load', onLoad);
+	});
+}
+
 export default function Page({ params }: Route.LoaderArgs)
 {
 	const navigator = useNavigate();
@@ -98,12 +142,11 @@ export default function Page({ params }: Route.LoaderArgs)
 	const [ data, setData ] = useImmer<ProjectData | null>(null);
 	const [ pictures, setPictures ] = useImmer<Picture[]>([]);
 	const [ contents, setContents ] = useImmer<ProjectContent[]>([]);
-
+	
 	const [ creatingContent, setCreatingContent ] = useState(false);
 	const [ creatingPicture, setCreatingPicture ] = useState(false);
-	
-	const inputPicture = useRef<HTMLInputElement>(null);
-	const inputPictureSmall = useRef<HTMLInputElement>(null);
+
+	const [ picturesToSend, setPicturesToSend ] = useState<PictureInput[]>([]);
 
 	const reorderTimer = useRef<NodeJS.Timeout>(null);
 	const commentTimer = useRef<NodeJS.Timeout>(null);
@@ -236,12 +279,33 @@ export default function Page({ params }: Route.LoaderArgs)
 							defaultValue={ contentData?.lang }
 							onChange={ () => setEditing(true) }
 						>
-							<option value='en-US'>en-US</option>
-							<option value='es-MX'>es-MX</option>
+							{ mode === 'creating' && 
+								langOptions
+									.filter(lang => contents.findIndex(c => c.lang == lang.value) == -1)
+									.map((option, i) => (
+										<option
+											key={ i }
+											value={ option.value }
+										>
+											{ option.label }
+										</option>
+									))
+							}
+							{ mode === 'editing' && 
+								langOptions
+									.map((option, i) => (
+										<option
+											key={ i }
+											value={ option.value }
+										>
+											{ option.label }
+										</option>
+									))
+							}
 						</select>
 					</div>
 
-					<div>
+					<div className={ style.name }>
 						<label htmlFor={ `name-${id}` }>Name</label>
 						<input
 							type='text'
@@ -403,11 +467,17 @@ export default function Page({ params }: Route.LoaderArgs)
 							<div>
 								<label>Lang</label>
 								<select name='lang' defaultValue={ alt.lang } required>
-									<option value='en-US'>en-US</option>
-									<option value='es-MX'>es-MX</option>
+									{ langOptions.map((option, i) => (
+										<option
+											key={ i }
+											value={ option.value }
+										>
+											{ option.label }
+										</option>
+									)) }
 								</select>
 							</div>
-							<div>
+							<div className={ style.name }>
 								<label>Alt</label>
 								<input
 									type='text'
@@ -494,11 +564,20 @@ export default function Page({ params }: Route.LoaderArgs)
 							<div>
 								<label>Lang</label>
 								<select name='lang' required>
-									<option value='en-US'>en-US</option>
-									<option value='es-MX'>es-MX</option>
+									{ langOptions
+										.filter(lang => picData.alts.findIndex(p => p.lang == lang.value) == -1)
+										.map((option, i) => (
+											<option
+												key={ i }
+												value={ option.value }
+											>
+												{ option.label }
+											</option>
+										))
+									}
 								</select>
 							</div>
-							<div>
+							<div className={ style.name }>
 								<label>Alt</label>
 								<input
 									type='text'
@@ -508,14 +587,14 @@ export default function Page({ params }: Route.LoaderArgs)
 							</div>
 						</div>
 						<div className={ style.inputs }>
+							<button>Add</button>
 							<button role='button' onClick={ () => setAddingAlt(false) }>
 								Cancel
 							</button>
-							<button>Add</button>
 						</div>
 					</form>
 				}
-				{ !addingAlt &&
+				{ !addingAlt && picData.alts.length !== langOptions.length &&
 					<button className={ style['alt-row'] + ' ' + style.new } onClick={ () => setAddingAlt(true) }>
 						<img
 							src={ plusIcon }
@@ -607,7 +686,7 @@ export default function Page({ params }: Route.LoaderArgs)
 						<ContentRow mode='creating'/>
 					}
 				</div>
-				{ !creatingContent &&
+				{ !creatingContent && contents.length !== langOptions.length &&
 					<button onClick={ () => setCreatingContent(true) }>
 						Create
 					</button>
@@ -669,63 +748,58 @@ export default function Page({ params }: Route.LoaderArgs)
 								return;
 							}
 
-							const formData = new FormData(ev.currentTarget);
-							const toSend = Object.fromEntries(formData);
+							try {
+								for (const chunk of picturesToSend) {
+									const responsePost = await Fetcher.post(`projects/${params.id}/picture`, chunk);
 
-							const responsePost = await Fetcher.post(`projects/${params.id}/picture`, toSend);
-
-							if (responsePost.status === 200) {
+									if (responsePost.status !== 200) {
+										console.error(responsePost);
+										throw new Error('Something went wrong when trying to upload a picture.');
+									}
+								}
+							} catch (e) {
+								console.error(e);
+							} finally {
 								const responseGet = await Fetcher.get<Project>(`projects/${params.id}`);
 								setProjectData(responseGet.body);
-							}
 
-							setCreatingPicture(false);
+								setCreatingPicture(false);
+							}
 						} }
 					>
-						<input type='hidden' name='picture' ref={ inputPicture }/>
-						<input type='hidden' name='picture_small' ref={ inputPictureSmall }/>
+						<input
+							type='file'
+							accept='image/png, image/jpeg, image/webp'
+							required
+							multiple
 
-						<ImageInput
 							onChange={ async (ev) =>
 							{
 								if (!ev.currentTarget.files) {
 									return;
 								}
 
-								const file = ev.currentTarget.files[0]!;
-								const fileUrl = URL.createObjectURL(file);
+								const files = ev.currentTarget.files;
 
-								const img = new Image();
-								img.src = fileUrl;
+								let dataToSet: PictureInput[] = [];
 
-								async function onLoad()
-								{
-									img.removeEventListener('load', onLoad);
-
-									const canvasOriginal = document.createElement('canvas');
-									canvasOriginal.width = img.width;
-									canvasOriginal.height = img.height;
-
-									const context = canvasOriginal.getContext('2d')!;
-									context.drawImage(img, 0, 0);
-
-									const imgData = canvasOriginal.toDataURL();
-									const imgSmallData = await CanvasManipulator.processImage(file, {
-										size: 250,
-										axis: 'y',
-										type: 'webp',
-										quality: 0.75,
+								for (const file of files) {
+									const result = await loadImage(file);
+									dataToSet.push({
+										picture: result[0],
+										picture_small: result[1],
 									});
-
-									inputPicture.current!.value = imgData;
-									inputPictureSmall.current!.value = imgSmallData;
 								}
 
-								img.addEventListener('load', onLoad);
+								setPicturesToSend(dataToSet);
 							} }
 						/>
 
-						<button>Upload</button>
+						{ picturesToSend.length > 0 &&
+							<button>
+								Upload
+							</button>
+						}
 					</form>
 
 					<button onClick={ () => setCreatingPicture(false) }>
@@ -733,7 +807,10 @@ export default function Page({ params }: Route.LoaderArgs)
 					</button>
 				</> }
 				{ !creatingPicture &&
-					<button onClick={ () => setCreatingPicture(true) }>
+					<button onClick={ () => {
+						setCreatingPicture(true);
+						setPicturesToSend([]);
+					} }>
 						Create
 					</button>
 				}
