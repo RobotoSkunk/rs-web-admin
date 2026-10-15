@@ -112,7 +112,7 @@ export default function Page()
 						value={ project }
 						className={ style.project }
 						onDragStart={ (ev) => (ev.target as HTMLLIElement).style.cursor = 'grabbing' }
-						onDragEnd={ (ev) => (ev.target as HTMLLIElement).style.cursor = 'drag' }
+						onDragEnd={ (ev) => (ev.target as HTMLLIElement).style.cursor = 'grab' }
 					>
 						<div className={ style.borders }>
 							<img

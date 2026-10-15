@@ -17,6 +17,7 @@
 **/
 
 import {
+	useDeferredValue,
 	useEffect,
 	useRef,
 	useState,
@@ -25,6 +26,10 @@ import {
 import {
 	useImmer,
 } from 'use-immer';
+
+import {
+	Reorder,
+} from 'motion/react';
 
 import type {
 	Route,
@@ -35,11 +40,38 @@ import remarkGfm from 'remark-gfm';
 
 import Fetcher from '@/utils/fetcher';
 import Checkbox from '@/components/Checkbox';
+import ImageInput from '@/components/ImageInput';
+import CanvasManipulator from '@/utils/canvas-manipulator';
+
+import draggerIcon from '@/assets/img/dragger.svg';
+import plusIcon from '@/assets/img/plus.svg';
 
 import style from './page.module.css';
 
+type Picture = {
+	id: string;
+	picture: {
+		filename: string;
+		size: {
+			x: number;
+			y: number;
+		};
+	};
+	alts: {
+		id: UUID;
+		lang: string;
+		content: string;
+	}[];
+};
 
-type Project = {
+type ProjectContent = {
+	id: UUID;
+	lang: string;
+	name: string;
+	description: string;
+};
+
+type ProjectData = {
 	comment: string;
 	hidden: boolean;
 	icon: {
@@ -49,28 +81,37 @@ type Project = {
 			y: number;
 		};
 	};
-	pictures: {
-		id: string;
-		picture: {
-			filename: string;
-			size: {
-				x: number;
-				y: number;
-			};
-		};
-	}[];
-	contents: {
-		id: UUID;
-		lang: string;
-		name: string;
-		description: string;
-	}[];
+};
+
+type Project = ProjectData & {
+	pictures: Picture[];
+	contents: ProjectContent[];
 };
 
 export default function Page({ params }: Route.LoaderArgs)
 {
-	const [ data, setData ] = useImmer<Project | null>(null);
+	const [ data, setData ] = useImmer<ProjectData | null>(null);
+	const [ pictures, setPictures ] = useImmer<Picture[]>([]);
+	const [ contents, setContents ] = useImmer<ProjectContent[]>([]);
+
 	const [ creatingContent, setCreatingContent ] = useState(false);
+	const [ creatingPicture, setCreatingPicture ] = useState(false);
+	
+	const inputPicture = useRef<HTMLInputElement>(null);
+	const inputPictureSmall = useRef<HTMLInputElement>(null);
+
+	const commentTimer = useRef<NodeJS.Timeout>(null);
+
+
+	function setProjectData(data: Project)
+	{
+		const { pictures, contents, ...rest } = data;
+
+		setData(rest);
+		setContents(contents);
+		setPictures(pictures);
+	}
+
 
 	useEffect(() =>
 	{
@@ -81,7 +122,7 @@ export default function Page({ params }: Route.LoaderArgs)
 			const response = await Fetcher.get<Project>(`projects/${params.id}`);
 
 			if (!stop) {
-				setData(response.body);
+				setProjectData(response.body);
 			}
 		})();
 
@@ -97,18 +138,11 @@ export default function Page({ params }: Route.LoaderArgs)
 		);
 	}
 
-
 	function ContentRow({
-		contentId,
-		lang,
-		name,
-		description,
+		contentData,
 		mode,
 	}: {
-		contentId?: string;
-		lang?: string;
-		name?: string;
-		description?: string;
+		contentData?: ProjectContent;
 		mode: 'editing' | 'creating';
 	})
 	{
@@ -145,13 +179,13 @@ export default function Page({ params }: Route.LoaderArgs)
 						);
 
 						if (response.status === 200) {
-							setData(data =>
+							setContents(content =>
 							{
-								if (!data) {
+								if (!content) {
 									return;
 								}
 
-								data.contents.push({
+								content.push({
 									id: response.body.id,
 									lang: formData.get('lang') as string,
 									name: formData.get('name') as string,
@@ -162,19 +196,19 @@ export default function Page({ params }: Route.LoaderArgs)
 							setCreatingContent(false);
 						}
 					} else {
-						const response = await Fetcher.patch(`projects/content/${contentId}`, Object.fromEntries(formData));
+						const response = await Fetcher.patch(`projects/content/${contentData?.id}`, Object.fromEntries(formData));
 
 						if (response.status === 200) {
-							setData(data =>
+							setContents(content =>
 							{
-								if (!data) {
+								if (!content) {
 									return;
 								}
 
-								data.contents = [
-									...data.contents.filter(c => c.id !== contentId),
+								content = [
+									...content.filter(c => c.id !== contentData?.id),
 									{
-										id: contentId as UUID,
+										id: contentData?.id as UUID,
 										lang: formData.get('lang') as string,
 										name: formData.get('name') as string,
 										description: formData.get('description') as string,
@@ -182,7 +216,7 @@ export default function Page({ params }: Route.LoaderArgs)
 								];
 							});
 
-							setCreatingContent(false);
+							setEditing(false);
 						}
 					}
 				} }
@@ -193,7 +227,7 @@ export default function Page({ params }: Route.LoaderArgs)
 						<select
 							id={ `lang-${id}` }
 							name='lang'
-							defaultValue={ lang }
+							defaultValue={ contentData?.lang }
 							onChange={ () => setEditing(true) }
 						>
 							<option value='en-US'>en-US</option>
@@ -207,7 +241,7 @@ export default function Page({ params }: Route.LoaderArgs)
 							type='text'
 							id={ `name-${id}` }
 							name='name'
-							defaultValue={ name }
+							defaultValue={ contentData?.name }
 							onInput={ () => setEditing(true) }
 						/>
 					</div>
@@ -218,7 +252,7 @@ export default function Page({ params }: Route.LoaderArgs)
 					<textarea
 						id={ `desc-${id}` }
 						name='description'
-						defaultValue={ description }
+						defaultValue={ contentData?.description }
 						onInput={ (ev) =>
 						{
 							setEditing(true);
@@ -249,16 +283,9 @@ export default function Page({ params }: Route.LoaderArgs)
 							onClick={ async (ev) =>
 							{
 								ev.preventDefault();
-								await Fetcher.delete(`projects/content/${contentId}`);
+								await Fetcher.delete(`projects/content/${contentData?.id}`);
 
-								setData(data =>
-								{
-									if (!data) {
-										return;
-									}
-
-									data.contents = data.contents.filter(c => c.id !== contentId);
-								});
+								setContents(contents.filter(c => c.id !== contentData?.id));
 							} }
 						>
 							Delete
@@ -276,6 +303,225 @@ export default function Page({ params }: Route.LoaderArgs)
 		);
 	}
 
+	function PictureRow({
+		picData,
+	}: {
+		picData: Picture;
+	})
+	{
+		const [ addingAlt, setAddingAlt ] = useState(false);
+
+		return (<>
+			<div className={ style.centered }>
+				<img
+					src={ draggerIcon }
+					width={ 38 }
+					height={ 38 }
+					alt=''
+					draggable={ false }
+				/>
+			</div>
+			<div className={ style.centered }>
+				<img
+					src={ `/api/assets/${picData.picture.filename}` }
+					width={ picData.picture.size.x }
+					height={ picData.picture.size.y }
+					alt=''
+					draggable={ false }
+				/>
+				<div className={ style.controls }>
+					{/* <button>Change Picture</button> */}
+					<button
+						onClick={ async (ev) =>
+						{
+							ev.preventDefault();
+
+							const answer = confirm('Are you sure you want to delete this ALT?');
+
+							if (!answer) {
+								return;
+							}
+
+							const response = await Fetcher.delete<{
+								success: boolean;
+							}>(`projects/picture/${picData.id}`);
+
+							if (response.status === 200) {
+								setPictures(pictures.filter(pic => pic.id !== picData.id));
+							}
+						}}
+					>
+						Delete
+					</button>
+				</div>
+			</div>
+			<div className={ style.rows }>
+				{ picData.alts.map((alt, i) =>
+				(
+					<form
+						key={ i }
+						className={ style['alt-row'] }
+						
+						onSubmit={ async (ev) =>
+						{
+							ev.preventDefault();
+
+							if (!ev.currentTarget.checkValidity()) {
+								ev.currentTarget.reportValidity();
+								return;
+							}
+
+							const formData = new FormData(ev.currentTarget);
+							const toSend = Object.fromEntries(formData);
+
+							const response = await Fetcher.patch(`projects/picture/alt/${alt.id}`, toSend);
+
+							if (response.status === 200) {
+								setPictures(pictures =>
+								{
+									const picture = pictures.find(pic => pic.id === picData.id);
+
+									if (picture) {
+										const _alt = picture.alts.find(a => a.id === alt.id);
+
+										if (_alt) {
+											_alt.lang = formData.get('lang') as string;
+											_alt.content = formData.get('content') as string;
+										}
+									}
+								});
+							}
+						} }
+					>
+						<div className={ style.inputs }>
+							<div>
+								<label>Lang</label>
+								<select name='lang' defaultValue={ alt.lang } required>
+									<option value='en-US'>en-US</option>
+									<option value='es-MX'>es-MX</option>
+								</select>
+							</div>
+							<div>
+								<label>Alt</label>
+								<input
+									type='text'
+									name='content'
+									defaultValue={ alt.content }
+									required
+								/>
+							</div>
+						</div>
+						<div className={ style.inputs }>
+							<button>Update</button>
+							<button
+								role='button'
+								onClick={ async (ev) =>
+								{
+									ev.preventDefault();
+
+									const answer = confirm('Are you sure you want to delete this ALT?');
+
+									if (!answer) {
+										return;
+									}
+
+									const response = await Fetcher.delete<{
+										success: boolean;
+									}>(`projects/picture/alt/${alt.id}`);
+
+									if (response.status === 200) {
+										setPictures(pictures =>
+										{
+											const picture = pictures.find(pic => pic.id === picData.id);
+
+											if (picture) {
+												const newList = picture.alts.filter(a => a.id !== alt.id);
+												picture.alts = newList;
+											}
+										});
+									}
+								}}
+							>
+								Delete
+							</button>
+						</div>
+					</form>
+				)) }
+				{ addingAlt &&
+					<form
+						className={ style['alt-row'] }
+
+						onSubmit={ async (ev) =>
+						{
+							ev.preventDefault();
+
+							if (!ev.currentTarget.checkValidity()) {
+								ev.currentTarget.reportValidity();
+								return;
+							}
+
+							const formData = new FormData(ev.currentTarget);
+							const toSend = Object.fromEntries(formData);
+
+							const response = await Fetcher.post<{
+								error?: string;
+								id: string;
+							}>(`projects/picture/${picData.id}/alt`, toSend);
+
+							if (response.status === 200) {
+								setPictures(pictures =>
+								{
+									const picture = pictures.find(pic => pic.id === picData.id);
+
+									if (picture) {
+										picture.alts.push({
+											id: response.body.id as UUID,
+											lang: formData.get('lang') as string,
+											content: formData.get('content') as string,
+										});
+									}
+								});
+							}
+						} }
+					>
+						<div className={ style.inputs }>
+							<div>
+								<label>Lang</label>
+								<select name='lang' required>
+									<option value='en-US'>en-US</option>
+									<option value='es-MX'>es-MX</option>
+								</select>
+							</div>
+							<div>
+								<label>Alt</label>
+								<input
+									type='text'
+									name='content'
+									required
+								/>
+							</div>
+						</div>
+						<div className={ style.inputs }>
+							<button role='button' onClick={ () => setAddingAlt(false) }>
+								Cancel
+							</button>
+							<button>Add</button>
+						</div>
+					</form>
+				}
+				{ !addingAlt &&
+					<button className={ style['alt-row'] + ' ' + style.new } onClick={ () => setAddingAlt(true) }>
+						<img
+							src={ plusIcon }
+							width={ 30 }
+							height={ 30 }
+							alt='Add new alt'
+						/>
+					</button>
+				}
+			</div>
+		</>);
+	}
 
 	return (<>
 		<h1>Project { data.comment }</h1>
@@ -290,25 +536,50 @@ export default function Page({ params }: Route.LoaderArgs)
 
 				<label>
 					<span>Comment: </span>
-					<input type='text' defaultValue={ data.comment }/>
+					<input
+						type='text'
+						defaultValue={ data.comment }
+
+						onInput={ (ev) => {
+							if (commentTimer.current) {
+								clearTimeout(commentTimer.current);
+							}
+
+							let comment = ev.currentTarget.value;
+
+							commentTimer.current = setTimeout(async () =>
+							{
+								await Fetcher.patch<Project>(`projects/${params.id}`, {
+									comment,
+								});
+							}, 200);
+						} }
+					/>
 				</label>
 
-				<Checkbox defaultChecked={ !data.hidden }>Public</Checkbox>
+				<Checkbox
+					defaultChecked={ !data.hidden }
+					onChange={ async (ev) =>
+					{
+						await Fetcher.patch<Project>(`projects/${params.id}`, {
+							hidden: !ev.currentTarget.checked,
+						});
+					} }
+				>
+					Public
+				</Checkbox>
 			</div>
 
 			<section>
 				<h2>Contents</h2>
 
 				<div className={ style.contents }>
-					{ data.contents.map((content, i) =>
+					{ contents.map((content, i) =>
 					(
 						<ContentRow
 							key={ i }
 							mode='editing'
-							contentId={ content.id }
-							lang={ content.lang }
-							name={ content.name }
-							description={ content.description }
+							contentData={ content }
 						/>
 					)) }
 
@@ -325,6 +596,111 @@ export default function Page({ params }: Route.LoaderArgs)
 
 			<section>
 				<h2>Pictures</h2>
+
+				<Reorder.Group
+					values={ pictures }
+					className={ style.contents + ' ' + style.pictures }
+					onReorder={ (newOrder) =>
+					{
+						setPictures(newOrder);
+					}}
+				>
+					{ pictures.map((picData) =>
+					(
+						<Reorder.Item
+							key={ picData.id }
+							value={ picData }
+
+							className={ style.picture }
+							onDragStart={ (ev) => (ev.target as HTMLLIElement).style.cursor = 'grabbing' }
+							onDragEnd={ (ev) => (ev.target as HTMLLIElement).style.cursor = 'grab' }
+						>
+							<PictureRow
+								picData={ picData }
+							/>
+						</Reorder.Item>
+					)) }
+				</Reorder.Group>
+
+				{ creatingPicture && <>
+					<form
+						onSubmit={ async (ev) =>
+						{
+							ev.preventDefault();
+
+							if (!ev.currentTarget.checkValidity()) {
+								ev.currentTarget.reportValidity();
+								return;
+							}
+
+							const formData = new FormData(ev.currentTarget);
+							const toSend = Object.fromEntries(formData);
+
+							const responsePost = await Fetcher.post(`projects/${params.id}/picture`, toSend);
+
+							if (responsePost.status === 200) {
+								const responseGet = await Fetcher.get<Project>(`projects/${params.id}`);
+								setProjectData(responseGet.body);
+							}
+
+							setCreatingPicture(false);
+						} }
+					>
+						<input type='hidden' name='picture' ref={ inputPicture }/>
+						<input type='hidden' name='picture_small' ref={ inputPictureSmall }/>
+
+						<ImageInput
+							onChange={ async (ev) =>
+							{
+								if (!ev.currentTarget.files) {
+									return;
+								}
+
+								const file = ev.currentTarget.files[0]!;
+								const fileUrl = URL.createObjectURL(file);
+
+								const img = new Image();
+								img.src = fileUrl;
+
+								async function onLoad()
+								{
+									img.removeEventListener('load', onLoad);
+
+									const canvasOriginal = document.createElement('canvas');
+									canvasOriginal.width = img.width;
+									canvasOriginal.height = img.height;
+
+									const context = canvasOriginal.getContext('2d')!;
+									context.drawImage(img, 0, 0);
+
+									const imgData = canvasOriginal.toDataURL();
+									const imgSmallData = await CanvasManipulator.processImage(file, {
+										size: 250,
+										axis: 'y',
+										type: 'webp',
+										quality: 0.75,
+									});
+
+									inputPicture.current!.value = imgData;
+									inputPictureSmall.current!.value = imgSmallData;
+								}
+
+								img.addEventListener('load', onLoad);
+							} }
+						/>
+
+						<button>Upload</button>
+					</form>
+
+					<button onClick={ () => setCreatingPicture(false) }>
+						Cancel
+					</button>
+				</> }
+				{ !creatingPicture &&
+					<button onClick={ () => setCreatingPicture(true) }>
+						Create
+					</button>
+				}
 			</section>
 		</div>
 	</>);

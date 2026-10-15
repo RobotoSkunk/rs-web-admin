@@ -27,6 +27,10 @@
 .contents {
 	display: flex;
 	flex-direction: column;
+
+	&.pictures {
+		padding: 0;
+	}
 }
 
 .info {
@@ -67,6 +71,65 @@
 
 		& .footer {
 			flex-direction: row;
+			gap: 8px;
+		}
+	}
+}
+
+.picture {
+	display: flex;
+	flex-direction: row;
+
+	margin: 0;
+	gap: 8px;
+	cursor: grab;
+
+	background: var(--background);
+	border: 1px solid var(--primary-200);
+	padding: 8px;
+	border-radius: 8px;
+
+	& .centered {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+
+		gap: 8px;
+	}
+
+	& .controls {
+		display: flex;
+		gap: 8px;
+	}
+
+	& .rows {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+
+		gap: 8px;
+	}
+
+	& .alt-row {
+		display: flex;
+		justify-content: space-between;
+
+		height: fit-content;
+
+		padding: 8px;
+		border-radius: 8px;
+		border: 1px solid var(--primary-200);
+
+		&.new {
+			align-items: center;
+			justify-content: center;
+		}
+
+		& .inputs {
+			display: flex;
+			flex-direction: row;
+
 			gap: 8px;
 		}
 	}
