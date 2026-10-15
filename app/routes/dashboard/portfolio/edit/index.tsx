@@ -100,6 +100,7 @@ export default function Page({ params }: Route.LoaderArgs)
 	const inputPicture = useRef<HTMLInputElement>(null);
 	const inputPictureSmall = useRef<HTMLInputElement>(null);
 
+	const reorderTimer = useRef<NodeJS.Timeout>(null);
 	const commentTimer = useRef<NodeJS.Timeout>(null);
 
 
@@ -552,7 +553,7 @@ export default function Page({ params }: Route.LoaderArgs)
 								await Fetcher.patch<Project>(`projects/${params.id}`, {
 									comment,
 								});
-							}, 200);
+							}, 250);
 						} }
 					/>
 				</label>
@@ -600,10 +601,26 @@ export default function Page({ params }: Route.LoaderArgs)
 				<Reorder.Group
 					values={ pictures }
 					className={ style.contents + ' ' + style.pictures }
-					onReorder={ (newOrder) =>
+
+					onReorder={ newOrder =>
 					{
 						setPictures(newOrder);
-					}}
+
+						if (reorderTimer.current) {
+							clearTimeout(reorderTimer.current);
+						}
+
+						reorderTimer.current = setTimeout(async () =>
+						{
+							const list: string[] = [];
+
+							for (const picture of newOrder) {
+								list.push(picture.id);
+							}
+
+							await Fetcher.post('projects/picture/order', list);
+						}, 1000);
+					} }
 				>
 					{ pictures.map((picData) =>
 					(

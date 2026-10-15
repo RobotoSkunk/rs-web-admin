@@ -99,9 +99,15 @@ export default function Page()
 						clearTimeout(timer.current);
 					}
 
-					timer.current = setTimeout(() =>
+					timer.current = setTimeout(async () =>
 					{
-						console.log(newOrder);
+						const list: string[] = [];
+
+						for (const project of newOrder) {
+							list.push(project.id);
+						}
+
+						await Fetcher.post('projects/order', list);
 					}, 1000);
 				} }
 			>
