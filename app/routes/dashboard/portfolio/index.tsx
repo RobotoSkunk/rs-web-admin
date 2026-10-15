@@ -49,6 +49,7 @@ interface Project {
 		y: number;
 	};
 	hidden: boolean;
+	languages: string[];
 }
 
 export default function Page()
@@ -145,7 +146,7 @@ export default function Page()
 								</Link>
 							</div>
 							<span>
-								[ ] { project.hidden ? 'Hidden' : 'Public' }
+								[{ project.languages.join(', ') }] { project.hidden ? 'Hidden' : 'Public' }
 							</span>
 						</div>
 					</Reorder.Item>
