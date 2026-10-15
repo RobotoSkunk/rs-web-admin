@@ -17,7 +17,6 @@
 **/
 
 import {
-	useDeferredValue,
 	useEffect,
 	useRef,
 	useState,
@@ -30,6 +29,10 @@ import {
 import {
 	Reorder,
 } from 'motion/react';
+
+import {
+	useNavigate,
+} from 'react-router';
 
 import type {
 	Route,
@@ -90,6 +93,8 @@ type Project = ProjectData & {
 
 export default function Page({ params }: Route.LoaderArgs)
 {
+	const navigator = useNavigate();
+
 	const [ data, setData ] = useImmer<ProjectData | null>(null);
 	const [ pictures, setPictures ] = useImmer<Picture[]>([]);
 	const [ contents, setContents ] = useImmer<ProjectContent[]>([]);
@@ -569,6 +574,20 @@ export default function Page({ params }: Route.LoaderArgs)
 				>
 					Public
 				</Checkbox>
+
+				<button
+					onClick={ async () =>
+					{
+						const answer = confirm('Are you sure you want to delete this project?');
+
+						if (answer) {
+							await Fetcher.delete<Project>(`projects/${params.id}`);
+							await navigator('/dashboard/portfolio');
+						}
+					} }
+				>
+					Delete
+				</button>
 			</div>
 
 			<section>
