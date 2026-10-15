@@ -35,6 +35,8 @@ export default [
 			route('portfolio/:id', 'routes/dashboard/portfolio/edit/index.tsx'),
 			route('illustrations', 'routes/dashboard/illustrations/index.tsx'),
 			route('illustrations/:id', 'routes/dashboard/illustrations/edit/index.tsx'),
+			route('blogs', 'routes/dashboard/blogs/index.tsx'),
+			route('blogs/:id', 'routes/dashboard/blogs/edit/index.tsx'),
 		]),
 	]),
 ] satisfies RouteConfig;
