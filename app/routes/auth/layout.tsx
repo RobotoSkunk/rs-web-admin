@@ -18,6 +18,7 @@
 
 import {
 	useContext,
+	useEffect,
 } from 'react';
 
 import {
@@ -26,6 +27,7 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useNavigate,
 } from 'react-router';
 
 import {
@@ -33,11 +35,33 @@ import {
 } from '../../contexts/nonce';
 
 import style from './auth.module.css';
+import Fetcher from '@/utils/fetcher';
 
 
 export default function Layout()
 {
+	const navigator = useNavigate();
+
 	const nonce = useContext(NonceContext);
+
+	useEffect(() =>
+	{
+		let stop = false;
+
+		(async () =>
+		{
+			const result = await Fetcher.get<Identity>('identity');
+
+			if (!stop && result.status === 200) {
+				await navigator('/dashboard');
+			}
+		})();
+
+		return () =>
+		{
+			stop = true;
+		};
+	}, [ ]);
 
 	return (
 		<html lang='en'>

@@ -29,6 +29,7 @@ import {
 	Outlet,
 	Scripts,
 	ScrollRestoration,
+	useNavigate,
 } from 'react-router';
 
 import {
@@ -46,6 +47,8 @@ import './globals.css';
 
 export default function Layout()
 {
+	const navigator = useNavigate();
+
 	const nonce = useContext(NonceContext);
 	const [ identity, setIdentity ] = useState<Identity | null>(null);
 
@@ -57,8 +60,12 @@ export default function Layout()
 		{
 			const result = await Fetcher.get<Identity>('identity');
 
-			if (!stop && result.status === 200) {
-				setIdentity(result.body);
+			if (!stop) {
+				if (result.status === 200) {
+					setIdentity(result.body);
+				} else {
+					await navigator('/');
+				}
 			}
 		})();
 
