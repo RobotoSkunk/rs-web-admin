@@ -45,7 +45,7 @@ type BlogEntry = {
 
 export async function clientLoader()
 {
-	const response = await Fetcher.get<BlogEntry[]>('/blogs/');
+	const response = await Fetcher.get<BlogEntry[]>('blogs');
 	return response.body;
 }
 
@@ -134,7 +134,7 @@ export default function Page({ loaderData }: Route.ComponentProps)
 						const response = await Fetcher.post<{
 							error: { message: string },
 							id: number,
-						}>('blogs/', toSend);
+						}>('blogs', toSend);
 
 						if (response.status === 200) {
 							setBlogs(b =>

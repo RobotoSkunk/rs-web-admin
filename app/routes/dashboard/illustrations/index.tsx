@@ -17,7 +17,6 @@
 **/
 
 import {
-	useEffect,
 	useRef,
 	useState,
 } from 'react';
@@ -29,6 +28,10 @@ import {
 import {
 	useImmer,
 } from 'use-immer';
+
+import type {
+	Route,
+} from './+types/index';
 
 import Fetcher from '@/utils/fetcher';
 import CanvasManipulator from '@/utils/canvas-manipulator';
@@ -52,32 +55,27 @@ type Illustration = {
 	hidden: boolean;
 };
 
-export default function Page()
+export async function clientLoader()
+{
+	const response = await Fetcher.get<Illustration[]>('illustrations');
+	return response.body;
+}
+
+export function HydrateFallback()
+{
+	return (<>
+		<h1>Illustrations</h1>
+		<p>Loading...</p>
+	</>);
+}
+
+export default function Page({ loaderData }: Route.ComponentProps)
 {
 	const [ modalOpen, setModalOpen ] = useState(false);
-	const [ list, setList ] = useImmer<Illustration[]>([]);
+	const [ list, setList ] = useImmer<Illustration[]>(loaderData);
 
 	const inputPicture = useRef<HTMLInputElement>(null);
 	const inputPictureSmall = useRef<HTMLInputElement>(null);
-
-	useEffect(() =>
-	{
-		let stop = false;
-
-		(async () =>
-		{
-			const result = await Fetcher.get<Illustration[]>('illustrations');
-
-			if (!stop && result.status === 200) {
-				setList(result.body);
-			}
-		})();
-
-		return () =>
-		{
-			stop = true;
-		};
-	}, [ ]);
 
 
 	return (<>

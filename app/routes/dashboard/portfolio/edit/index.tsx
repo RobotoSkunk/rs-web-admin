@@ -34,13 +34,13 @@ import {
 	useNavigate,
 } from 'react-router';
 
-import type {
-	Route,
-} from './+types/index';
-
 import {
 	langOptions,
 } from '@/utils/common';
+
+import type {
+	Route,
+} from './+types/index';
 
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -53,6 +53,7 @@ import draggerIcon from '@/assets/img/dragger.svg';
 import plusIcon from '@/assets/img/plus.svg';
 
 import style from './page.module.css';
+
 
 type Picture = {
 	id: string;
@@ -135,7 +136,20 @@ async function loadImage(file: File)
 	});
 }
 
-export default function Page({ params }: Route.LoaderArgs)
+export async function clientLoader({ params }: Route.ComponentProps)
+{
+	const response = await Fetcher.get<Project>(`projects/${params.id}`);
+	return response.body;
+}
+
+export function HydrateFallback()
+{
+	return (<>
+		<h1>Loading...</h1>
+	</>);
+}
+
+export default function Page({ params, loaderData }: Route.ComponentProps)
 {
 	const navigator = useNavigate();
 
@@ -161,25 +175,11 @@ export default function Page({ params }: Route.LoaderArgs)
 		setPictures(pictures);
 	}
 
-
 	useEffect(() =>
 	{
-		let stop = false;
-
-		(async () =>
-		{
-			const response = await Fetcher.get<Project>(`projects/${params.id}`);
-
-			if (!stop) {
-				setProjectData(response.body);
-			}
-		})();
-
-		return () =>
-		{
-			stop = true;
-		};
+		setProjectData(loaderData);
 	}, [ ]);
+
 
 	if (!data) {
 		return (

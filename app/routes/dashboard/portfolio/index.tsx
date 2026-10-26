@@ -17,7 +17,6 @@
 **/
 
 import {
-	useEffect,
 	useRef,
 	useState,
 } from 'react';
@@ -29,6 +28,10 @@ import {
 import {
 	Link,
 } from 'react-router';
+
+import type {
+	Route,
+} from './+types/index';
 
 import Modal from '@/components/Modal';
 import ImageInput from '@/components/ImageInput';
@@ -52,32 +55,27 @@ interface Project {
 	languages: string[];
 }
 
-export default function Page()
+export async function clientLoader()
+{
+	const response = await Fetcher.get<Project[]>('projects');
+	return response.body;
+}
+
+export function HydrateFallback()
+{
+	return (<>
+		<h1>Projects</h1>
+		<p>Loading...</p>
+	</>);
+}
+
+export default function Page({ loaderData }: Route.ComponentProps)
 {
 	const [ creating, setCreating ] = useState(false);
 	const inputPicture = useRef<HTMLInputElement>(null);
 
-	const [ projects, setProjects ] = useState<Project[]>([]);
+	const [ projects, setProjects ] = useState<Project[]>(loaderData);
 	const timer = useRef<NodeJS.Timeout>(null);
-
-	useEffect(() =>
-	{
-		let stop = false;
-
-		(async () =>
-		{
-			const response = await Fetcher.get<Project[]>('projects');
-
-			if (!stop) {
-				setProjects(response.body);
-			}
-		})();
-
-		return () =>
-		{
-			stop = true;
-		};
-	}, [ ]);
 
 	return (<>
 		<h1>Portfolio</h1>

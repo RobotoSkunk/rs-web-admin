@@ -62,7 +62,20 @@ type Illustration = {
 	alts: Alt[];
 };
 
-export default function Page({ params }: Route.LoaderArgs)
+export async function clientLoader({ params }: Route.LoaderArgs)
+{
+	const response = await Fetcher.get<Illustration>(`illustrations/${params.id}`);
+	return response.body;
+}
+
+export function HydrateFallback()
+{
+	return (<>
+		<h1>Loading...</h1>
+	</>);
+}
+
+export default function Page({ params, loaderData }: Route.ComponentProps)
 {
 	const navigator = useNavigate();
 
@@ -74,21 +87,7 @@ export default function Page({ params }: Route.LoaderArgs)
 
 	useEffect(() =>
 	{
-		let stop = false;
-
-		(async () =>
-		{
-			const result = await Fetcher.get<Illustration>(`illustrations/${params.id}`);
-
-			if (!stop && result.status === 200) {
-				setData(result.body);
-			}
-		})();
-
-		return () =>
-		{
-			stop = true;
-		};
+		setData(loaderData);
 	}, [ ]);
 
 
