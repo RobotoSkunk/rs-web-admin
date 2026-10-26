@@ -34,8 +34,9 @@
 		background: var(--background);
 		padding: 8px;
 		border-radius: 8px;
+		border: 1px solid var(--primary-200);
 
-		box-shadow: 0 0 44px var(--foreground);
+		box-shadow: 0 0 44px #00000050;
 	}
 }
 
