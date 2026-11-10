@@ -207,11 +207,11 @@ function AsyncUrlEmbed({
 			clearTimeout(timeoutRef.current);
 		}
 
-		timeoutRef.current = setTimeout(async () =>
-		{
-			if (cache[targetUrl]) {
-				setMetadata(cache[targetUrl]);
-			} else {
+		if (cache[targetUrl]) {
+			setMetadata(cache[targetUrl]);
+		} else {
+			timeoutRef.current = setTimeout(async () =>
+			{
 				const result = await Fetcher.get<URLMetadata>(`urls/query?q=${targetUrl}`);
 
 				if (result.status === 200) {
@@ -258,8 +258,8 @@ function AsyncUrlEmbed({
 						}
 					}
 				}
-			}
-		}, 1000);
+			}, 1000);
+		}
 
 		return () =>
 		{
@@ -273,21 +273,31 @@ function AsyncUrlEmbed({
 		return <div>Loading...</div>;
 	}
 
-	return (<>
-		<div>
-			<span>{ metadata.url }</span><br/>
-			<span>{ metadata.site }</span><br/>
-			<span>{ metadata.title }</span><br/>
-			<span>{ metadata.description }</span><br/>
+	return (
+		<div className={ style.embed }>
+			<div className={ style.header }>
+				<span>[</span>
+				<span>{ metadata.site }</span>
+				<span>]</span>
+			</div>
+			<a
+				href={ metadata.url }
+				target='_blank'
+				rel='noreferrer noopener'
+			>
+				{ metadata.title }
+			</a>
+			<span>{ metadata.description }</span>
 			{ metadata.image &&
 				<img
 					src={ metadata.image.data }
 					width={ metadata.image.size?.x }
 					height={ metadata.image.size?.y }
+					alt={ metadata.image.alt ?? '' }
 				/>
 			}
 		</div>
-	</>);
+	);
 };
 
 export default function Page({ params, loaderData }: Route.ComponentProps)

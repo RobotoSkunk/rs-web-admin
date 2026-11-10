@@ -109,7 +109,7 @@
 		}
 	}
 
-	& .header {
+	& > .header {
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -174,5 +174,21 @@
 
 	& .create {
 		margin: 8px;
+	}
+}
+
+.embed {
+	display: flex;
+	flex-direction: column;
+
+	margin: 8px;
+	border: 1px solid var(--primary-200);
+	padding: 8px;
+	border-radius: 8px;
+	gap: 8px;
+
+	& .header {
+		display: flex;
+		justify-content: space-between;
 	}
 }
