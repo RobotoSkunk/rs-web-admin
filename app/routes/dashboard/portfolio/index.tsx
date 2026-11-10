@@ -131,7 +131,7 @@ export default function Page({ loaderData }: Route.ComponentProps)
 						<div className={ style.body }>
 							<div className={ style.header }>
 								<img
-									src={ `/api/assets/${project.icon_filename}` }
+									src={ `${API_PREFIX}/assets/${project.icon_filename}` }
 									width={ 38 }
 									height={ 38 }
 									alt=''

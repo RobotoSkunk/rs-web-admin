@@ -25,6 +25,8 @@ import {
 } from '@react-router/dev/routes';
 
 export default [
+	route('/_internal/*', 'routes/bogus.tsx'), // This is to disable the annoying error output for calls to /_internal
+
 	layout('routes/auth/layout.tsx', [
 		index('routes/auth/login.tsx'),
 	]),

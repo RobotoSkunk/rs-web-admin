@@ -40,9 +40,6 @@ export default class CanvasManipulator
 				img.removeEventListener('load', onLoad);
 				let scale = 1;
 
-				canvas.width = img.width;
-				canvas.height = img.height;
-
 				if (options.axis === 'auto') {
 					if (img.width > img.height) {
 						options.axis = 'x';
@@ -70,11 +67,11 @@ export default class CanvasManipulator
 				try {
 					if (scale < 1) {
 						const pica = Pica();
-						console.log(img.width, img.height);
-						console.log(canvas.width, canvas.height);
-
 						await pica.resize(img, canvas);
 					} else {
+						canvas.width = img.width;
+						canvas.height = img.height;
+
 						const context = canvas.getContext('2d')!;
 						context.drawImage(img, 0, 0, canvas.width, canvas.height);
 					}

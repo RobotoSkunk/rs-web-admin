@@ -16,6 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
 **/
 
+import type {
+	Updater,
+} from 'use-immer';
+
 import {
 	useImmer,
 } from 'use-immer';
@@ -27,6 +31,15 @@ import {
 import {
 	motion,
 } from 'motion/react';
+
+import {
+	MarkdownHooks,
+} from 'react-markdown';
+
+import type {
+	Element,
+	ElementContent,
+} from 'hast';
 
 import {
 	langOptions,
@@ -42,7 +55,6 @@ import type {
 	Route,
 } from './+types/index';
 
-import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import Fetcher from '@/utils/fetcher';
@@ -56,6 +68,8 @@ import style from './page.module.css';
 import clockIcon from '@/assets/img/clock.svg';
 import plusIcon from '@/assets/img/plus.svg';
 
+
+const targetImgSize = 450;
 
 type Blog = {
 	id: number;
@@ -101,6 +115,25 @@ type BlogContentPartial = Partial<{
     content: string;
 }>;
 
+type URLMetadata = {
+	url: string;
+	site: string;
+	title: string | null;
+	description: string | null;
+	image: {
+		data: string;
+		alt: string;
+		size: {
+			x: number;
+			y: number;
+		} | null;
+	} | null;
+}
+
+type MetadataCache = {
+	[key: string]: URLMetadata;
+};
+
 export async function clientLoader({ params }: Route.LoaderArgs)
 {
 	const blogResponse = await Fetcher.get<Blog>(`blogs/${params.id}`);
@@ -119,6 +152,144 @@ export function HydrateFallback()
 	</>);
 }
 
+function getText(node: Element | ElementContent): string
+{
+	if (!node) {
+		return '';
+	}
+
+	if (node.type === 'text') {
+		return node.value;
+	}
+
+	if (node.type !== 'comment' && node.type !== 'raw' && node.children) {
+		return node.children.map(getText).join('');
+	}
+
+	return '';
+}
+
+function AsyncUrlEmbed({
+	targetUrl,
+	cache,
+	setCache,
+}: {
+	targetUrl: string;
+	cache: MetadataCache;
+	setCache: Updater<MetadataCache>;
+})
+{
+	const timeoutRef = useRef<NodeJS.Timeout>(null);
+	const [ metadata, setMetadata ] = useImmer<URLMetadata | null>(null);
+
+	async function storeMetadata(data: URLMetadata, save: boolean)
+	{
+		if (save) {
+			await Fetcher.post(`/urls/`, data);
+		}
+
+		setMetadata(data);
+		setCache(cacheData =>
+		{
+			cacheData[targetUrl] = data;
+		});
+	}
+
+	useEffect(() =>
+	{
+		try {
+			new URL(targetUrl);
+		} catch (e) {
+			return;
+		}
+
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current);
+		}
+
+		timeoutRef.current = setTimeout(async () =>
+		{
+			if (cache[targetUrl]) {
+				setMetadata(cache[targetUrl]);
+			} else {
+				const result = await Fetcher.get<URLMetadata>(`urls/query?q=${targetUrl}`);
+
+				if (result.status === 200) {
+					if (result.body.image) {
+						result.body.image.data = `${API_PREFIX}/assets/${result.body.image.data}`;
+					}
+
+					storeMetadata(result.body, false);
+				} else {
+					const response = await fetch(`/_internal/meta-url?q=${targetUrl}`);
+					const data = await response.json() as URLMetadata;
+
+					if (response.ok) {
+						if (data.image) {
+							const imageData = data.image.data;
+							const blob = await (await fetch(imageData)).blob();
+
+							const imgSmallData = await CanvasManipulator.processImage(blob, {
+								size: targetImgSize,
+								axis: 'auto',
+								type: 'webp',
+								quality: 0.75,
+							});
+
+							const img = new Image();
+
+							async function onLoad()
+							{
+								img.removeEventListener('load', onLoad);
+
+								data.image!.data = imgSmallData;
+								data.image!.size = {
+									x: img.width,
+									y: img.height,
+								};
+
+								await storeMetadata(data, true);
+							}
+
+							img.addEventListener('load', onLoad);
+							img.src = imgSmallData;
+						} else {
+							await storeMetadata(data, true);
+						}
+					}
+				}
+			}
+		}, 1000);
+
+		return () =>
+		{
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+		};
+	}, [ targetUrl ]);
+
+	if (!metadata) {
+		return <div>Loading...</div>;
+	}
+
+	return (<>
+		<div>
+			<span>{ metadata.url }</span><br/>
+			<span>{ metadata.site }</span><br/>
+			<span>{ metadata.title }</span><br/>
+			<span>{ metadata.description }</span><br/>
+			{ metadata.image &&
+				<img
+					src={ metadata.image.data }
+					width={ metadata.image.size?.x }
+					height={ metadata.image.size?.y }
+				/>
+			}
+		</div>
+	</>);
+};
+
 export default function Page({ params, loaderData }: Route.ComponentProps)
 {
 	const navigator = useNavigate();
@@ -132,6 +303,8 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 	const [ contentsData, setContentsData ] = useImmer<BlogContent[]>([]);
 	const [ currentLang, setCurrentLang ] = useImmer<string>(langOptions[0]!.value);
 	const [ previewText, setPreviewText ] = useState('');
+
+	const [ urlCache, setUrlCache ] = useImmer<MetadataCache>({});
 
 	const [ pendingOperations, setPendingOperations ] = useImmer<BlogContentPartial>({});
 	const [ savingChanges, setSavingChanges ] = useState(false);
@@ -343,12 +516,35 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 							Preview
 						</div>
 						<div className={ style.preview }>
-							<Markdown
+							<MarkdownHooks
 								remarkPlugins={[ remarkGfm ]}
 								components={{
+									blockquote(props) {
+										let action = getText(props.node!).trim();
+
+										if (action.startsWith('$')) {
+											const args = action.split(' ');
+
+											switch (args[0]) {
+												case '$EMBED':
+													return (
+														<AsyncUrlEmbed
+															targetUrl={ args[1]! }
+															cache={ urlCache }
+															setCache={ setUrlCache }
+														/>
+													);
+											}
+										}
+
+										return <blockquote { ...props }/>;
+									},
 									a(props) {
 										const { node, target, rel, ...rest } = props;
-										return <a target='_blank' rel='noreferrer noopener' { ...rest }/>;
+
+										return (
+											<a target='_blank' rel='noreferrer noopener' { ...rest }/>
+										);
 									},
 									img(props) {
 										const { src, width, height, ...rest } = props;
@@ -361,7 +557,7 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 												if (pictureData) {
 													return (
 														<img
-															src={ `/api/assets/${pictureData.picture.filename}` }
+															src={ `${API_PREFIX}/assets/${pictureData.picture.filename}` }
 															width={ pictureData.picture.size.x }
 															height={ pictureData.picture.size.y }
 															{ ...rest }
@@ -376,7 +572,7 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 								}}
 							>
 								{ previewText }
-							</Markdown>
+							</MarkdownHooks>
 						</div>
 					</div>
 				</div>
@@ -386,7 +582,7 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 					(
 						<div className={ style.picture }>
 							<img
-								src={ `/api/assets/${data.picture.filename}` }
+								src={ `${API_PREFIX}/assets/${data.picture.filename}` }
 								width={ data.picture.size.x }
 								height={ data.picture.size.y }
 							/>
@@ -482,7 +678,6 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 							async function onLoad()
 							{
 								img.removeEventListener('load', onLoad);
-								const target = 450;
 
 								const canvasOriginal = document.createElement('canvas');
 								canvasOriginal.width = img.width;
@@ -494,10 +689,10 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 								const imgData = canvasOriginal.toDataURL();
 								inputPicture.current!.value = imgData;
 
-								if (img.height > target) {
+								if (img.height > targetImgSize) {
 									const imgSmallData = await CanvasManipulator.processImage(file, {
-										size: target,
-										axis: 'y',
+										size: targetImgSize,
+										axis: 'auto',
 										type: 'webp',
 										quality: 0.75,
 									});

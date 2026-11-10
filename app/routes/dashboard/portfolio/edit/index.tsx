@@ -393,7 +393,7 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 			</div>
 			<div className={ style.centered }>
 				<img
-					src={ `/api/assets/${picData.picture.filename}` }
+					src={ `${API_PREFIX}/assets/${picData.picture.filename}` }
 					width={ picData.picture.size.x }
 					height={ picData.picture.size.y }
 					alt=''
@@ -614,7 +614,7 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 		<div className={ style.container }>
 			<div className={ style.info }>
 				<img
-					src={ `/api/assets/${data.icon.filename}` }
+					src={ `${API_PREFIX}/assets/${data.icon.filename}` }
 					width={ data.icon.size.x }
 					height={ data.icon.size.y }
 				/>
