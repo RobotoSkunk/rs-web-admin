@@ -270,7 +270,15 @@ function AsyncUrlEmbed({
 	}, [ targetUrl ]);
 
 	if (!metadata) {
-		return <div>Loading...</div>;
+		return (
+			<div className={ style.embed }>
+				<div className={ style.header }>
+					<span>[</span>
+					<span>Loading...</span>
+					<span>]</span>
+				</div>
+			</div>
+		);
 	}
 
 	return (
@@ -285,9 +293,11 @@ function AsyncUrlEmbed({
 				target='_blank'
 				rel='noreferrer noopener'
 			>
-				{ metadata.title }
+				{ metadata.title ?? metadata.url }
 			</a>
-			<span>{ metadata.description }</span>
+			{ metadata.description &&
+				<span>{ metadata.description }</span>
+			}
 			{ metadata.image &&
 				<img
 					src={ metadata.image.data }
