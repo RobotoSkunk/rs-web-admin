@@ -210,6 +210,8 @@ function AsyncUrlEmbed({
 		if (cache[targetUrl]) {
 			setMetadata(cache[targetUrl]);
 		} else {
+			setMetadata(null);
+
 			timeoutRef.current = setTimeout(async () =>
 			{
 				const result = await Fetcher.get<URLMetadata>(`urls/query?q=${targetUrl}`);
@@ -461,7 +463,22 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 				<input type='text' defaultValue={ blogData.comment }/>
 			</div>
 			<div>
-				<Checkbox defaultChecked={ !blogData.hidden }>
+				<Checkbox
+					defaultChecked={ !blogData.hidden }
+					onChange={ async (ev) =>
+					{
+						const value = !ev.currentTarget.checked;
+
+						await Fetcher.patch(`/blogs/${params.id}`, {
+							hidden: value,
+						});
+
+						setBlogData(data =>
+						{
+							data.hidden = value;
+						});
+					} }
+				>
 					Public
 				</Checkbox>
 			</div>
@@ -628,6 +645,21 @@ export default function Page({ params, loaderData }: Route.ComponentProps)
 							width={ 50 }
 							height={ 50 }
 						/>
+					</button>
+				</div>
+
+				<div style={{ margin: '18px auto' }}>
+					<button
+						onClick={ async () =>
+						{
+							const response = confirm('Are you sure you want to publish the current changes?');
+
+							if (response) {
+								await Fetcher.post<URLMetadata>(`blogs/content/${currentContext()!.id}/publish`, { });
+							}
+						} }
+					>
+						Publish
 					</button>
 				</div>
 			</> }

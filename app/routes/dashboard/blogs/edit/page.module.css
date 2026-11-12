@@ -80,7 +80,7 @@
 	height: fit-content;
 
 	flex-grow: 1;
-	--height: 780px;
+	--height: 90vh;
 
 	& textarea {
 		resize: none;
